@@ -1,0 +1,8 @@
+# Specify filepatterns you want to assign special attributes.
+
+*.jpg binary
+*.wad binary
+*.mdl binary
+*.wav binary
+*.spr binary
+*.dat binary

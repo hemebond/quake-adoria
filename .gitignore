@@ -1,0 +1,12 @@
+# Specify filepatterns you want git to ignore.
+
+*.bsp
+*.log
+*.texinfo.json
+*.lit
+*.prt
+*.pts
+
+*.dat
+
+**/autosave/
