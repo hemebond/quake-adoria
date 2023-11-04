@@ -119,7 +119,7 @@ void() play_sound =
 
  //johnfitz -- ambient_general (this is from Rubicon Rumble dev kit)
 
-/*QUAKED ambient_general (0.3 0.1 0.6) (-10 -10 -8) (10 10 8)
+/*QUAKED ambient_general (0.3 0.1 0.6) (-10 -10 -8) (10 10 8) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
 Plays any looped sound
 
 Keys:
@@ -231,8 +231,22 @@ void () play_tbaby_fx = //thanks Khreathor -- dumptruck_ds
 {
   tbaby_die2();
 }
-
 void() play_tbabyexplode =
+{
+  if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
+    return;
+  precache_sound2 ("blob/death1.wav");
+  self.use = play_tbaby_fx;
+};
+
+
+/*QUAKED play_spawnexpl (0.3 0.1 0.6) (-10 -10 -8) (10 10 8)
+
+When triggered, creates a Spawn death explosion at it's origin. Causes damage.
+
+*/
+
+void() play_spawnexpl =
 {
   if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
     return;
@@ -500,7 +514,10 @@ deadstuff version 1.0 - tony collen - manero@canweb.net - EfNet IRC #QuakeEd or 
 -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 */
 
-/*QUAKED gib_head_demon (0 0.5 0.8) (-16 -16 0) (16 16 56)
+/*QUAKED gib_head_demon (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_demon.mdl");
+}
 */
 void() gib_head_demon =
 {
@@ -522,7 +539,10 @@ void() gib_head_demon =
 	}
 };
 
-/*QUAKED gib_head_dog (0 0.5 0.8) (-16 -16 0) (16 16 56)
+/*QUAKED gib_head_dog (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_dog.mdl");
+}
 */
 void() gib_head_dog =
 {
@@ -544,7 +564,10 @@ void() gib_head_dog =
 	}
 };
 
-/*QUAKED gib_head_army (0 0.5 0.8) (-16 -16 0) (16 16 56)
+/*QUAKED gib_head_army (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_guard.mdl");
+}
 */
 void() gib_head_army =
 {
@@ -566,8 +589,10 @@ void() gib_head_army =
 	}
 };
 
-/*QUAKED gib_head_hell_knight (0 0.5 0.8) (-16 -16 0) (16 16 56)
-*/
+/*QUAKED gib_head_hell_knight (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_hellkn.mdl");
+}*/
 void() gib_head_hell_knight =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
@@ -588,8 +613,10 @@ void() gib_head_hell_knight =
 	}
 };
 
-/*QUAKED gib_head_knight (0 0.5 0.8) (-16 -16 0) (16 16 56)
-*/
+/*QUAKED gib_head_knight (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_knight.mdl");
+}*/
 void() gib_head_knight =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
@@ -610,7 +637,10 @@ void() gib_head_knight =
 	}
 };
 
-/*QUAKED gib_head_enforcer (0 0.5 0.8) (-16 -16 0) (16 16 56)
+/*QUAKED gib_head_enforcer (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_mega.mdl");
+}
 */
 void() gib_head_enforcer =
 {
@@ -632,8 +662,10 @@ void() gib_head_enforcer =
 	}
 };
 
-/*QUAKED gib_head_ogre (0 0.5 0.8) (-16 -16 0) (16 16 56)
-*/
+/*QUAKED gib_head_ogre (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_ogre.mdl");
+}*/
 void() gib_head_ogre =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
@@ -654,8 +686,10 @@ void() gib_head_ogre =
 	}
 };
 
-/*QUAKED gib_head_player (0 0.5 0.8) (-16 -16 0) (16 16 56)
-*/
+/*QUAKED gib_head_player (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_player.mdl");
+}*/
 void() gib_head_player =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
@@ -676,8 +710,10 @@ void() gib_head_player =
 	}
 };
 
-/*QUAKED gib_head_shalrath (0 0.5 0.8) (-16 -16 0) (16 16 56)
-*/
+/*QUAKED gib_head_shalrath (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_shal.mdl");
+}*/
 void() gib_head_shalrath =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
@@ -698,8 +734,10 @@ void() gib_head_shalrath =
 	}
 };
 
-/*QUAKED gib_head_shambler (0 0.5 0.8) (-16 -16 0) (16 16 56)
-*/
+/*QUAKED gib_head_shambler (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_shams.mdl");
+}*/
 void() gib_head_shambler =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
@@ -720,8 +758,10 @@ void() gib_head_shambler =
 	}
 };
 
-/*QUAKED gib_head_wizard (0 0.5 0.8) (-16 -16 0) (16 16 56)
-*/
+/*QUAKED gib_head_wizard (0 0.5 0.8) (-16 -16 0) (16 16 56) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/h_wizard.mdl");
+}*/
 void() gib_head_wizard =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
@@ -742,8 +782,10 @@ void() gib_head_wizard =
 	}
 };
 
-/*QUAKED gib_misc_1 (0 0.5 0.8) (-8 -8 -8) (8 8 8)
-*/
+/*QUAKED gib_misc_1 (0 0.5 0.8) (-8 -8 -8) (8 8 8) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/gib1.mdl");
+}*/
 void() gib_misc_1 =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
@@ -764,8 +806,10 @@ void() gib_misc_1 =
 	}
 };
 
-/*QUAKED gib_misc_2 (0 0.5 0.8) (-8 -8 -8) (8 8 8)
-*/
+/*QUAKED gib_misc_2 (0 0.5 0.8) (-8 -8 -8) (8 8 8) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/gib2.mdl");
+}*/
 void() gib_misc_2 =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
@@ -786,8 +830,10 @@ void() gib_misc_2 =
 	}
 };
 
-/*QUAKED gib_misc_3 (0 0.5 0.8) (-8 -8 -8) (8 8 8)
-*/
+/*QUAKED gib_misc_3 (0 0.5 0.8) (-8 -8 -8) (8 8 8) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/gib3.mdl");
+}*/
 void() gib_misc_3 =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
@@ -819,6 +865,7 @@ void() gib_misc_3 =
 // wait = wait this long before falling
 // ==============================================================================*/
 float DONT_FADE = 1;
+float SILENT = 2;
 
 void() func_fall_think =
 {
@@ -863,10 +910,13 @@ void() fall_touch =
     self.attack_finished = time + self.wait;
     self.cnt = TRUE;
 
-    if (self.noise != "")
+    if (!(self.spawnflags & SILENT))
+    {
+      if (self.noise != "")
         sound (self, CHAN_AUTO, self.noise, 1, ATTN_NORM);
-    else
+      else
         sound (self, CHAN_AUTO, "buttons/switch21.wav", 1, ATTN_NORM);
+    }
 };
 
 void() fall_use =  // thanks again RennyC for help on revisions --dumptruck_ds
@@ -880,7 +930,15 @@ void() fall_use =  // thanks again RennyC for help on revisions --dumptruck_ds
           sound (self, CHAN_AUTO, "buttons/switch21.wav", 1, ATTN_NORM);
     };
 
-/*QUAKED func_fall (0 .5 .8) ?
+/*QUAKED func_fall (0 .5 .8) ? DONT_FADE X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+A brush that drops and fades away when touched and/or triggered.
+Add some spice to your jumping puzzles or other scripted sequences!
+Monsters will not trigger func_fall but will be gibbed if one falls on them.
+NOTE: When a func_fall brush touches another brush or entity it will stop, which can look odd in certain situations.
+noise = sound to play when triggered, the default is a switch sound.
+wait = wait this long before falling.
+Use the DONT_FADE spawnflag if desired.
+
 Falling brush upon touch
 */
 
@@ -951,7 +1009,7 @@ local entity	pspot;
 	self.enemy = pspot;
 };
 
-/*QUAKED misc_particle_stream (0 .5 .8) (-8 -8 -8) (8 8 8)
+/*QUAKED misc_particle_stream (0 .5 .8) (-8 -8 -8) (8 8 8) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
 A particle stream!  It appears when triggered.  This entity is
 one end of the stream, target another entity as the other end-point.
 I used the info_notnull, but you should be able to target anything
@@ -989,8 +1047,35 @@ void() misc_particle_stream =
 //##########################################
 // Original entity submitted by Jan Martin Mathiassen, aka. TGR
 
+void() heal_think = 
+{
+  if (self.cnt == self.count)
+  {
+    dprint("trigger_heal think: full\n");
+    self.think = SUB_Null;
+    return;
+  }
+  local float recharge_amount = self.speed;
+  if (self.count < (self.cnt + self.speed))
+  {
+    recharge_amount = self.count - self.cnt;
+  }
+  dprint("trigger_heal think: [max: ");
+  dprint(ftos(self.count));
+  dprint(", current: ");
+  dprint(ftos(self.cnt));
+  dprint(", recharging: ");
+  dprint(ftos(recharge_amount));
+  dprint("]\n");
+
+  self.cnt = self.cnt + recharge_amount;
+  self.nextthink = time + self.delay;
+};
+
 void() heal_touch =
 {
+  if (self.estate != STATE_ACTIVE)
+    return;
   if (other.movetype == MOVETYPE_NOCLIP) // from Copper -- dumptruck_ds
     return FALSE;
 	if(self.spawnflags & HEAL_PLAYER_ONLY && other.classname != "player")
@@ -1003,6 +1088,13 @@ void() heal_touch =
 	if(other.heal_timer > time)
 		return;
 
+  if(self.count && self.cnt <= 0)
+  { 
+    if(self.message2)
+      centerprint(other, self.message2);
+    return;
+  }
+
 	if ((other.takedamage) && (other.health < self.health_max))
 	{
 
@@ -1010,22 +1102,42 @@ void() heal_touch =
         sound (self, CHAN_AUTO, self.noise, 1, ATTN_NORM);
     else
         sound (self, CHAN_AUTO, "items/r_item1.wav", 1, ATTN_NORM);
-
+    local float calculated_healing;
 		if ((other.health + self.heal_amount) > self.health_max)
 		{
-			// if(self.spawnflags & HEAL_OBEY_MAX)
-			// 	T_Heal (other, (self.health - other.health), 0);
-			// else
-				T_Heal (other, (self.health_max - other.health), 1);
+      calculated_healing = self.health_max - other.health;
 		}
 		else
 		{
-			// if(self.spawnflags & HEAL_OBEY_MAX)
-			// 	T_Heal (other, self.cnt, 0);
-			// else
-				T_Heal (other, self.heal_amount, 1);
+      calculated_healing = self.heal_amount;
 		}
 
+    if (self.count) 
+    {
+      
+      if (calculated_healing > self.cnt)
+      {
+        calculated_healing = self.cnt;
+      }
+      self.cnt = self.cnt - calculated_healing;
+      if (self.delay)
+      {
+        self.think = heal_think;
+        self.nextthink = time + self.delay;
+      } 
+      dprint("trigger_heal used: [max: ");
+      dprint(ftos(self.count));
+      dprint(", current: ");
+      dprint(ftos(self.cnt));
+      dprint(", using: ");
+      dprint(ftos(calculated_healing));
+      dprint("]\n");
+    }
+    if (self.message)
+    {
+      centerprint(other, self.message);
+    }
+    T_Heal (other, calculated_healing, 1);
 		other.heal_timer = time + self.wait;
 	}
 };
@@ -1038,13 +1150,19 @@ void() heal_toggle=
 		self.touch = SUB_Null;
 };
 
-/*QUAKED trigger_heal (.5 .5 .5) ? HEAL_START_ON HEAL_PLAYER_ONLY HEAL_MONSTER_ONLY
+/*QUAKED trigger_heal (.5 .5 .5) ? HEAL_START_ON HEAL_PLAYER_ONLY HEAL_MONSTER_ONLY X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Any object touching this will be healed
 heal_amount -- the amount to heal each time (default 5)
 wait -- the time between each healing (default 1)
 health_max -- the upper limit for the healing (default 100, max 250)
 sounds -- set to 1 to enable the noise1 field for custom healing sound
-noise1 -- path to custom sound file
+noise -- path to custom sound file
+message -- message to print on heal
+count -- maximum heal before exhausted
+speed -- amount to recharge at a time
+delay -- time before recharging
+message2 -- message to print when exhausted
 */
 void() trigger_heal =
   {
@@ -1065,14 +1183,29 @@ void() trigger_heal =
 	else if (self.health_max > 250)
 		self.health_max = 250;
 
-	if(self.targetname)
-	{
-		self.use = heal_toggle;
-		if(self.spawnflags & HEAL_START_ON)
-			self.touch = heal_touch;
-		else
-			self.touch = SUB_Null;
-	}
-	else
+  if (self.count)
+  {
+    self.cnt = self.count;
+
+    if (self.speed && !self.delay)
+    {
+      self.delay = 10;
+    } else if (!self.speed && self.delay)
+    {
+      self.speed = 5;
+    }
+  }
+
+	// if(self.targetname)
+	// {
+	// 	self.use = heal_toggle;
+	// 	if(self.spawnflags & HEAL_START_ON)
+	// 		self.touch = heal_touch;
+	// 	else
+	// 		self.touch = SUB_Null;
+	// }
+	// else
 		self.touch = heal_touch;
+
+  SUB_CheckWaiting();
 };

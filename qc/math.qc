@@ -90,3 +90,120 @@ float(float value, float minValue, float maxValue) wrap = {
 
     return mod(value - minValue, range + 1) + minValue;
 };
+
+
+
+float(float a, float b, float mix) lerp =
+{
+    if (mix <= 0) return a;
+    if (mix >= 1) return b;
+    return (b * mix + a * ( 1 - mix ) );
+}
+
+vector(vector a, vector b, float mix) lerpVector =
+{
+    if (mix <= 0) return a;
+    if (mix >= 1) return b;
+    return (b * mix + a * ( 1 - mix ) );
+}
+
+// for a relaxing lerp: hermite lerp.
+float(float a, float b, float mix) lerpHermite =
+{
+    if (mix <= 0) return a;
+    if (mix >= 1) return b;
+    
+    local float h01;
+    
+    h01 = mix * mix;
+    h01 *= 3 - 2 * mix;
+    
+    return (b * h01 + a * ( 1 - h01 ) );
+}
+
+vector(vector a, vector b, float mix) lerpVectorHermite =
+{
+    if (mix <= 0) return a;
+    if (mix >= 1) return b;
+
+    local float h01;
+    
+    h01 = mix * mix;
+    h01 *= 3 - 2 * mix;
+    
+    return (b * h01 + a * ( 1 - h01 ) );
+}
+
+float(float anga, float angb) angledif =
+{
+    float dif;
+    dif = fabs(anga - angb);
+    if (dif > 180)
+        dif = 360 - dif;
+    return dif;
+}
+
+float(vector ang, vector base_ang, vector offset) isInAngle = {
+    if (angledif(ang_x, base_ang_x) > offset_x || angledif(ang_y, base_ang_y) > offset_y)
+        return FALSE;
+    else
+        return TRUE;
+};
+
+
+// normalizes an angle vector to the 0/+359 range
+vector(vector ang) normalizeAngles = {
+
+    ang_x = ang_x - floor(ang_x/360) * 360;
+    ang_y = ang_y - floor(ang_y/360) * 360;
+    ang_z = ang_z - floor(ang_z/360) * 360;
+
+    /*
+    while (ang_x > 360)
+        ang_x = ang_x - 360;
+
+    while (ang_x < 0)
+        ang_x = ang_x + 360;
+
+    while (ang_y > 360)
+        ang_y = ang_y - 360;
+
+    while (ang_y < 0)
+        ang_y = ang_y + 360;
+
+    while (ang_z > 360)
+        ang_z = ang_z - 360;
+
+    while (ang_z < 0)
+        ang_z = ang_z + 360;
+    */
+    return ang;
+};
+
+// normalizes an angle vector to the -180/+179 range
+vector(vector ang) normalizeAngles180 = {
+    ang_x = ((ang_x+180) - floor((ang_x+180)/360) * 360) - 180;
+    ang_y = ((ang_y+180) - floor((ang_y+180)/360) * 360) - 180;
+    ang_z = ((ang_z+180) - floor((ang_z+180)/360) * 360) - 180;
+
+    /*
+    while (ang_x > 180)
+        ang_x = ang_x - 360;
+
+    while (ang_x < -180)
+        ang_x = ang_x + 360;
+
+    while (ang_y > 180)
+        ang_y = ang_y - 360;
+
+    while (ang_y < -180)
+        ang_y = ang_y + 360;
+
+    while (ang_z > 180)
+        ang_z = ang_z - 360;
+
+    while (ang_z < -180)
+        ang_z = ang_z + 360;
+    */
+    return ang;
+};

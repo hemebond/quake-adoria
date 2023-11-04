@@ -111,6 +111,11 @@ void() finale_1 =
 	local entity	pos, pl;
 	local entity	timer;
 
+// 1998-07-30 Shub kill count fix by Maddes  start
+	killed_monsters = killed_monsters + 1;
+	WriteByte (MSG_ALL, SVC_KILLEDMONSTER);	// FIXME: reliable broadcast
+// 1998-07-30 Shub kill count fix by Maddes  end
+
 	intermission_exittime = time + 10000000;	// never allow exit
 	intermission_running = 1;
 
@@ -254,6 +259,9 @@ void() monster_oldone =
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
 		return;
 
+	if (self.spawnflags & I_AM_TURRET)
+		objerror("Incompatible spawnflag: TURRET_MODE\n");
+
 	if (deathmatch)
 	{
 		remove(self);
@@ -281,6 +289,7 @@ void() monster_oldone =
 	self.takedamage = DAMAGE_YES;
 	self.th_pain = nopain;
 	self.th_die = finale_1;
+	self.touch = monster_touch;	// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten
 	shub = self;
 
 	total_monsters = total_monsters + 1;

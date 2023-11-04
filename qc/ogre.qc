@@ -167,6 +167,7 @@ void() BDW_OgreFireFlak =
 	local float flakcount;
 	local vector dir, ang;
 	local entity flak;
+	local float projspeed = 800 * self.proj_speed_mod;
 
 	flakcount = 8;
 
@@ -186,7 +187,7 @@ void() BDW_OgreFireFlak =
 	// f*cking hack...is this a v_forward problem?
 		dir_z = dir_z * -1;
 		//dir = dir*1000;
-		dir = dir*800;
+		//dir = dir*800;
 
 
 		flak = spawn();
@@ -199,14 +200,41 @@ void() BDW_OgreFireFlak =
 		flak.flags = FL_NOSELECT;
 		flak.touch = FlakTouch;
 		flak.angles = vectoangles(dir);
-		flak.velocity = dir;
-		flak.think = SUB_Remove;
-		flak.nextthink = time + 6;
+		SetSpeed(flak, dir, projspeed);
+		if (self.homing > 0)
+		{
+			SetupHoming(flak, projspeed);
+		}
+		else
+		{
+			flak.nextthink = time + 6;
+			flak.think = SUB_Remove;
+		}
 		flak.dmg = 4;
 
 		flak.spawnflags = MONSTER_FLAK_OGRE;	//this is a hack to tell FlakTouch that it came from an ogre
+		// setmodel(flak, "progs/spike.mdl");
+		flak.skin = self.skin_proj; //dumptruck_ds
 
-		setmodel(flak, "progs/spike.mdl");
+		if (self.mdl_proj != "") // dumptruck_ds
+		{
+				setmodel (flak, self.mdl_proj);
+			}
+			else
+			{
+				setmodel (flak, "progs/spike.mdl");
+		}
+
+		if (!flak.skin_proj) // dumptruck_ds
+		{
+				flak.skin = self.skin_proj;
+			}
+			else
+			{
+				flak.skin = 0;
+		}
+	// dumptruck_ds - end
+
 		setsize(flak, '0 0 0', '0 0 0');
 		setorigin(flak, self.origin + '0 0 16');
 
@@ -318,8 +346,86 @@ void(float elevation) PreachFireGrenade =
 // set missile duration
 	missile.nextthink = time + 2.5;
 	missile.think = OgreGrenadeExplode;
+	// setmodel (missile, "progs/grenade.mdl");
+	if (self.mdl_proj != "") // dumptruck_ds
+	{
+			setmodel (missile, self.mdl_proj);
+		}
+		else
+		{
+			setmodel (missile, "progs/grenade.mdl");
+	}
 
-	setmodel (missile, "progs/grenade.mdl");
+	if (!missile.skin_proj) // dumptruck_ds
+	{
+			missile.skin = self.skin_proj;
+		}
+		else
+		{
+			missile.skin = 0;
+	}
+
+	setsize (missile, '0 0 0', '0 0 0');
+	setorigin (missile, self.origin);
+};
+
+// end Preach tutorial
+
+/*
+================
+PreachFireZombie
+for Z-Aware Zombies in Turret Mode only
+================
+*/
+void(float elevation) PreachFireZombie =
+{
+	local	entity missile;
+	local vector ang;
+
+	// self.effects = self.effects | EF_MUZZLEFLASH;
+
+	sound_attack (self, CHAN_WEAPON, "zombie/z_shot1.wav", 1, ATTN_NORM);
+
+	missile = spawn ();
+	missile.owner = self;
+	missile.movetype = MOVETYPE_BOUNCE;
+	missile.solid = SOLID_BBOX;
+
+// set missile speed
+	ang = self.angles;
+  ang_x = -elevation;
+  makevectors (ang);
+
+  missile.velocity = v_forward * OGRE_G_VEL;
+
+	missile.avelocity = '3000 1000 2000';
+
+	missile.angles = vectoangles(missile.velocity);
+
+	missile.touch = ZombieGrenadeTouch;
+
+// set missile duration
+	missile.nextthink = time + 2.5;
+	missile.think = SUB_Remove;
+	// setmodel (missile, "progs/grenade.mdl");
+	if (self.mdl_proj != "") // dumptruck_ds
+	{
+			setmodel (missile, self.mdl_proj);
+		}
+		else
+		{
+			setmodel (missile, "progs/zom_gib.mdl");
+	}
+
+	if (!missile.skin_proj) // dumptruck_ds
+	{
+			missile.skin = self.skin_proj;
+		}
+		else
+		{
+			missile.skin = 0;
+	}
+
 	setsize (missile, '0 0 0', '0 0 0');
 	setorigin (missile, self.origin);
 };
@@ -391,7 +497,7 @@ void() OgreFireGrenade =
 			missile.touch = OgreGrenadeTouch;
 			missile.nextthink = time + 2.5;
 			missile.think = OgreGrenadeExplode;
-			setmodel (missile, "progs/grenade.mdl");
+			// setmodel (missile, "progs/grenade.mdl");
 			setsize (missile, '0 0 0', '0 0 0');
 			setorigin (missile, self.origin);
 		}
@@ -420,7 +526,8 @@ void() OgreFireSpike =
 
 
     sound (self, CHAN_WEAPON, "weapons/spike2.wav", 1, ATTN_NORM);
-    self.attack_finished = time + 0.2;
+    self.attack_finished = time + .7;
+    // self.attack_finished = time + 0.2;
 		self.effects = self.effects | EF_MUZZLEFLASH; // -- dumptruck_ds
 
     dir = normalize (self.enemy.origin - self.origin);
@@ -428,7 +535,27 @@ void() OgreFireSpike =
     launch_spike (self.origin + v_right * 4 + '0 0 16', dir);
 
     newmis.touch = superduperspike_touch; //dumptruck_ds found in client.qc
-    setmodel (newmis, "progs/lspike.mdl");
+    // setmodel (newmis, "progs/lspike.mdl");
+		newmis.skin = self.skin_proj; //dumptruck_ds
+
+		if (self.mdl_proj != "") // dumptruck_ds
+		{
+				setmodel (newmis, self.mdl_proj);
+			}
+			else
+			{
+				setmodel (newmis, "progs/lspike.mdl");
+		}
+
+		if (!newmis.skin_proj) // dumptruck_ds
+		{
+				newmis.skin = self.skin_proj;
+			}
+			else
+			{
+				newmis.skin = 0;
+		}
+	// dumptruck_ds - end
 
     setsize (newmis, VEC_ORIGIN, VEC_ORIGIN);
 };
@@ -579,16 +706,77 @@ void() W_FireMultiGrenade =
 // set missile duration
 	missile.nextthink = time + 1;
 	missile.think = MultiGrenadeExplode;
-
-	// setmodel (missile, "progs/grenade.mdl");
 	setmodel (missile, "progs/mervup.mdl");
+	missile.skin = self.skin_proj; //dumptruck_ds
+
 	setsize (missile, '0 0 0', '0 0 0');
-	setorigin (missile, self.origin);
+	setorigin (missile, self.origin + '0 0 16');
 };
 
 //=============================================================================
 //end doe qc -- dumptruck_ds
 //=============================================================================
+/*
+================
+OgreFireLavaBall by jaycie erysdren 2021-09-14
+================
+*/
+
+void() OgreFireLavaBall =
+{
+	local	vector	offang;
+	local	vector	org, vec, d;
+	// local	float	t;
+
+	offang = vectoangles (self.enemy.origin - self.origin);
+	makevectors (offang);
+
+	org = self.origin; // + p_x*v_forward + p_y*v_right + p_z*'0 0 1';
+
+// lead the player on hard mode
+	// if (skill > 1)
+	// {
+	// 	t = vlen(self.enemy.origin - org) / 300;
+	// 	vec = self.enemy.velocity;
+	// 	vec_z = 0;
+	// 	d = self.enemy.origin + t * vec;
+	// }
+	// else
+	// {
+		d = self.enemy.origin;
+	// }
+
+	vec = normalize (d - org);
+
+	// launch_spike (org, vec);
+	launch_spike2 (self.origin + v_right * 4 + '0 0 16', vec, 600);
+	self.effects = self.effects | EF_MUZZLEFLASH;
+	if (self.mdl_proj != "") // dumptruck_ds custom_mdls
+	{
+			setmodel (newmis, self.mdl_proj);
+		}
+		else
+		{
+			setmodel (newmis, "progs/lavaball.mdl");
+	}
+
+	if (!newmis.skin_proj) // dumptruck_ds
+	{
+			newmis.skin = self.skin_proj;
+		}
+		else
+		{
+			newmis.skin = 0;
+	}
+	newmis.avelocity = self.cust_avelocity;
+	if !(newmis.avelocity)
+	newmis.avelocity = '200 100 300';
+	setsize (newmis, VEC_ORIGIN, VEC_ORIGIN);
+	// newmis.touch = T_MissileTouch; // rocket explosion
+	newmis.touch = OgreGrenadeExplode;
+	sound_attack (self, CHAN_AUTO, "boss1/throw.wav", 1, ATTN_NORM);
+
+};
 
 /*
 ================
@@ -708,7 +896,8 @@ void() ogre_smash8	=[	$smash8,		ogre_smash9	] {ai_charge(10); chainsaw(0);};
 void() ogre_smash9	=[	$smash9,		ogre_smash10 ] {ai_charge(13); chainsaw(0);};
 void() ogre_smash10	=[	$smash10,		ogre_smash11 ] {chainsaw(1);};
 void() ogre_smash11	=[	$smash11,		ogre_smash12 ] {ai_charge(2); chainsaw(0);
-self.nextthink = self.nextthink + random()*0.2;};	// slight variation
+// self.nextthink = self.nextthink + random()*0.2;};	// slight variation
+self.nextthink = time + 0.1 + random()*0.2;};	// 1998-08-14 Incorrect setting of nextthink fix by Maddes/Lord Sméagol
 void() ogre_smash12	=[	$smash12,		ogre_smash13 ] {ai_charge(0);};
 void() ogre_smash13	=[	$smash13,		ogre_smash14 ] {ai_charge(4);};
 void() ogre_smash14	=[	$smash14,		ogre_run1	] {ai_charge(12);};
@@ -724,6 +913,36 @@ self.attack_elevation = IterateElevation(self.attack_elevation, self.enemy.origi
 void() ogre2_nail4   =[  $shoot3,        ogre_nail5  ] {ai_face();
 	PreachFireGrenade(self.attack_elevation);
 };
+// Preach tutorial alternate animation frames for monster_ogre_marksman -- dumptruck_ds
+// these are for the turret version of monster_ogre_marksman
+.float attack_elevation;
+void() ogre2_turret_attack1 =[  $shoot1,        ogre2_turret_attack2  ] {ai_face();
+self.attack_elevation = IterateElevation(OGRE_DEFAULT_ELEVATION, self.enemy.origin);};
+void() ogre2_turret_attack2   =[  $shoot2,        ogre2_turret_attack3  ] {ai_face();
+self.attack_elevation = IterateElevation(self.attack_elevation, self.enemy.origin);};
+void() ogre2_turret_attack3   =[  $shoot2,        ogre2_turret_attack4  ] {ai_face();
+self.attack_elevation = IterateElevation(self.attack_elevation, self.enemy.origin);};
+void() ogre2_turret_attack4   =[  $shoot3,        ogre2_turret_attack5  ] {ai_face();
+	PreachFireGrenade(self.attack_elevation);};
+void() ogre2_turret_attack5   =[  $shoot4,        ogre2_turret_attack6  ] {ai_face();};
+void() ogre2_turret_attack6   =[  $shoot5,        ogre2_turret_attack7  ] {ai_face();};
+void() ogre2_turret_attack7   =[  $shoot5,        ogre2_turret_attack8  ] {ai_face();};
+void() ogre2_turret_attack8   =[  $shoot6,        ogre2_turret_attack9  ] {ai_face();};
+void() ogre2_turret_attack9   =[  $shoot6,        ogre2_turret_seek1  ] {ai_face();};
+void() ogre2_turret_seek1	=[	$stand1,	ogre2_turret_seek2	] {ai_run(0);};
+void() ogre2_turret_seek2	=[	$stand2,	ogre2_turret_seek3	] {ai_run(0);};
+void() ogre2_turret_seek3	=[	$stand3,	ogre2_turret_seek4	] {ai_run(0);};
+void() ogre2_turret_seek4	=[	$stand4,	ogre2_turret_seek5	] {ai_run(0);};
+void() ogre2_turret_seek5	=[	$stand5,	ogre2_turret_seek6	] {
+if (random() < 0.2)
+	sound_idle (self, CHAN_VOICE, "ogre/ogidle.wav", 1, ATTN_IDLE);
+	ai_run(0);
+};
+void() ogre2_turret_seek6	=[	$stand6,	ogre2_turret_seek7	] {ai_run(0);};
+void() ogre2_turret_seek7	=[	$stand7,	ogre2_turret_seek8	] {ai_run(0);};
+void() ogre2_turret_seek8	=[	$stand8,	ogre2_turret_seek9	] {ai_run(0);};
+void() ogre2_turret_seek9	=[	$stand9,	ogre2_turret_seek1	] {ai_run(0);};
+
 //end Preach -- dumptruck_ds
 void() ogre_nail1	=[	$shoot1,		ogre_nail2	] {ai_face();};
 void() ogre_nail2	=[	$shoot2,		ogre_nail3	] {ai_face();};
@@ -746,11 +965,69 @@ void() ogre_nail4	=[	$shoot3,		ogre_nail5	] {ai_face();
 		{
 			W_FireMultiGrenade();
 		}
+		if (self.style == 4) // jaycie erysdren 2021-09-14
+		{
+			OgreFireLavaBall();
+			sound_misc2 (self, CHAN_WEAPON, "shalrath/attack2.wav", 1, ATTN_NORM); // used for initial attack sound dumptruck_ds
+		}
 };
 void() ogre_nail5	=[	$shoot4,		ogre_nail6	] {ai_face();};
 void() ogre_nail6	=[	$shoot5,		ogre_nail7	] {ai_face();};
 void() ogre_nail7	=[	$shoot6,		ogre_run1	] {ai_face();};
+//
+////////////////////////
+// turret frames START
+////////////////////////
+//
+void() ogre_turret_attack1	=[	$shoot1,		ogre_turret_attack2	] {ai_face();};
+void() ogre_turret_attack2	=[	$shoot2,		ogre_turret_attack3	] {ai_face();};
+void() ogre_turret_attack3	=[	$shoot2,		ogre_turret_attack4	] {ai_face();};
+void() ogre_turret_attack4	=[	$shoot3,		ogre_turret_attack5	] {ai_face();
+	if (self.style == 0)
+		{
+			OgreFireGrenade();
+		}
+	if (self.style == 1)
+		{
+			BDW_OgreFireFlak();
+			// OgreFireSpike();
+		}
+	else if (self.style == 2)
+		{
+			OgreFireSpike();
+		}
+		if (self.style == 3)
+		{
+			W_FireMultiGrenade();
+		}
+		if (self.style == 4) // jaycie erysdren 2021-09-14
+		{
+			OgreFireLavaBall();
+			sound_misc2 (self, CHAN_WEAPON, "shalrath/attack2.wav", 1, ATTN_NORM); // used for initial attack sound dumptruck_ds
+		}
+};
+void() ogre_turret_attack5	=[	$shoot4,		ogre_turret_attack6	] {ai_face();};
 
+void() ogre_turret_attack6=[	$shoot5,	ogre_turret_attack7	] {ai_face();};
+void() ogre_turret_attack7=[  $shoot5,  ogre_turret_attack8 ] {ai_face();};
+void() ogre_turret_attack8=[  $shoot6,  ogre_turret_attack9 ] {ai_face();};
+void() ogre_turret_attack9=[  $shoot6,  ogre_turret_seek1 ] {ai_face();};
+void() ogre_turret_seek1	=[	$stand1,	ogre_turret_seek2	] {ai_run(0);};
+void() ogre_turret_seek2	=[	$stand2,	ogre_turret_seek3	] {ai_run(0);};
+void() ogre_turret_seek3	=[	$stand3,	ogre_turret_seek4	] {ai_run(0);};
+void() ogre_turret_seek4	=[	$stand4,	ogre_turret_seek5	] {ai_run(0);};
+void() ogre_turret_seek5	=[	$stand5,	ogre_turret_seek6	] {
+if (random() < 0.2)
+	sound_idle (self, CHAN_VOICE, "ogre/ogidle.wav", 1, ATTN_IDLE);
+	ai_run(0);
+};
+void() ogre_turret_seek6	=[	$stand6,	ogre_turret_seek7	] {ai_run(0);};
+void() ogre_turret_seek7	=[	$stand7,	ogre_turret_seek8	] {ai_run(0);};
+void() ogre_turret_seek8	=[	$stand8,	ogre_turret_seek9	] {ai_run(0);};
+void() ogre_turret_seek9	=[	$stand9,	ogre_turret_seek1	] {ai_run(0);};
+////////////////////////
+//turret frames END
+///////////////////////
 void()	ogre_pain1	=[	$pain1,		ogre_pain2	] {};
 void()	ogre_pain2	=[	$pain2,		ogre_pain3	] {};
 void()	ogre_pain3	=[	$pain3,		ogre_pain4	] {};
@@ -811,6 +1088,9 @@ void(entity attacker, float damage)	ogre_pain =
 
 // don't make multiple pain sounds right after each other
 	if (self.pain_finished > time)
+		return;
+
+	if (self.spawnflags & I_AM_TURRET)
 		return;
 
 	sound_pain (self, CHAN_VOICE, "ogre/ogpain1.wav", 1, ATTN_NORM);
@@ -895,6 +1175,10 @@ void()	ogre_bdie3	=[	$bdeath3,	ogre_bdie4	]
 		{
 			self.ammo_rockets = 2;
 		}
+		if (self.style == 4) // lavaball ogre jaycie erysdren 2021-09-14
+		{
+			self.ammo_rockets = 2;
+		}
 		else if (self.style == 0)
 		{
 			self.ammo_rockets = 2;
@@ -949,11 +1233,13 @@ void() ogre_die =
 		{
 			ThrowGib ("progs/gib3.mdl", self.health);
 		}
+		DropStuff();
 		return;
 	}
 
 	sound_death (self, CHAN_VOICE, "ogre/ogdth.wav", 1, ATTN_NORM);
 
+	DropStuff();
 	if (random() < 0.5)
 		ogre_die1 ();
 	else
@@ -969,7 +1255,72 @@ void() ogre_melee =
 };
 
 
-/*QUAKED monster_ogre (1 0 0) (-32 -32 -24) (32 32 64) Ambush
+/*QUAKED monster_ogre (1 0 0) (-32 -32 -24) (32 32 64) AMBUSH X X TRIGGER_SPAWNED X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+	model ("progs/ogre.mdl");
+}
+Ogre.
+
+Default health = 200"
+
+style(Choices) : "Attack type" =
+0 : "Default (grenade)"
+1 : "Flak Ogre (Marcher, Quoth)"
+2 : "sniper (shoots single, deadly lava round)"
+3 : "multi-grenade (Mission Pack 2)"
+
+keep_ammo(integer) : "1 = Don't drop backpack upon death"
+snd_death(string) : "Path to custom death sound"
+snd_pain(string) : "Path to custom pain sound"
+snd_sight(string) : "Path to custom sight sound"
+snd_attack(string) : "Path to custom attack sound (CHAINSAW)"
+snd_idle(string) : "Path to custom idle sound (IDLE)"
+snd_misc(string) : "Path to custom sound (IDLE CHAINSAW DRAG)"
+snd_misc1(string) : "Path to custom sound (ATTACK GRUNT)"
+
+mdl_head(string) : "Path to custom head model"
+mdl_body(string) : "Path to custom body model"
+mdl_proj(string) : "Path to custom projectile model"
+skin_head(float) : "Skin index of custom head model"
+skin_proj(float) : "Skin index of custom projectile model"
+mdl_gib1(string) : "Path to custom 1st gib model"
+mdl_gib2(string) : "Path to custom 2nd gib model"
+mdl_gib3(string) : "Path to custom 3rd gib model"
+
+effects(choices) : "Add a visual effect to an entity"
+0 : "None (Default)"
+1 : "Brightfield (yellow particles)"
+4 : "Bright light"
+8 : "Dim light"
+
+berserk(choices) "Skips certain pain animations similar to skill 3 (Makes a semi-nightmare monster!)"
+0 : "Off (Default)"
+1 : "Berserk (skip pain animations)"
+
+delay(float) : "Delay spawn in for this amount of time"
+
+wait(choices) : "Play an effect when trigger spawned?"
+0 : "Teleport Effects (Default)"
+1 : "Spawn Silently"
+
+spawn_angry(Choices)
+0 : "Only when trigger spawned, default behavior - not angry"
+1 : "Only when trigger spawned, set to 1 to spawn angry at player"
+
+infight_mode(Choices)
+0 : "Default behavior, only with different classnames"
+1 : "Infight with monsters with the same classname but a different mdl_body"
+2 : "Infight with monsters with the same classname and model but a different skin"
+3 : "Infight no matter what"
+
+health(integer) : "Set this to a custom health amount"
+pain_target(string) : "Fire this target when pain_threshold is reached"
+pain_threshold(integer) : "Fire pain_target when health drops below this amount"
+sight_trigger(integer) : "1 = Fire target upon seeing the player instead of death"
+skin(integer) : "Skin index (default 0) Use this when your custom model has more than one skin to select"
+obit_name(string) : "When used with obit_method, this will set part of the text for a custom obituary. e.g. a Super Soldier! Using the examples here, the obituary would read: Player was eviscerated by a Super Solider!"
+obit_method(string) : "When used with obit_name, will set part of the text for a custom obituary. e.g. eviscerated - If empty, defaults to killed."
+damage_mod(float) : "USE WITH CAUTION! Multiply all damage from this monster by this number (e.g. 4 = Quad damage)"
 
 */
 void() monster_ogre =
@@ -997,7 +1348,13 @@ void() monster_ogre =
 	precache_sound_pain ("ogre/ogpain1.wav");
 	precache_sound_attack ("ogre/ogsawatk.wav");
 	precache_sound_sight ("ogre/ogwake.wav");
+	precache_sound_misc2 ("shalrath/attack2.wav");
 	precache_sound ("fish/bite.wav");
+	precache_sound ("boss1/throw.wav"); // jaycie erysdren 2021-09-14
+
+	precache_gib1 ("progs/gib1.mdl");
+	precache_gib2 ("progs/gib2.mdl");
+	precache_gib3 ("progs/gib3.mdl");
 
 	self.solid = SOLID_SLIDEBOX;
 	self.movetype = MOVETYPE_STEP;
@@ -1007,16 +1364,27 @@ void() monster_ogre =
 	// setmodel (self, "progs/ogre.mdl");
 
 	setsize (self, VEC_HULL2_MIN, VEC_HULL2_MAX);
-
+	if (!self.proj_speed_mod)
+	{
+		self.proj_speed_mod = 1;
+	}
 	if (!self.health) //thanks RennyC -- dumptruck_ds
 	self.health = 200;
 
 	self.th_stand = ogre_stand1;
 	self.th_walk = ogre_walk1;
-	self.th_run = ogre_run1;
+	if (self.spawnflags & I_AM_TURRET)
+	{
+	  self.th_run = ogre_turret_seek1;
+	}
+	else
+	{
+		self.th_run = ogre_run1;
+	}
 	self.th_die = ogre_die;
 	self.th_melee = ogre_melee;
 	self.th_missile = ogre_nail1;
+	self.th_turret = ogre_turret_attack1; //dumptruck_ds
 	if !(self.berserk) //Berserk test from http://celephais.net/board/view_thread.php?id=4&start=3465 -- dumptruck_ds
 	self.th_pain = ogre_pain;
 	else
@@ -1025,10 +1393,66 @@ void() monster_ogre =
 	walkmonster_start();
 };
 
-/*QUAKED monster_ogre_marksman (1 0 0) (-32 -32 -24) (32 32 64) Ambush
-Unlike vanilla Quake, this is more accurate Orge based on a tutorial from
-Preach which can be found here:
-https://tomeofpreach.wordpress.com/2014/01/03/proper-ogre-aiming/
+/*QUAKED monster_ogre_marksman (1 0 0) (-32 -32 -24) (32 32 64) AMBUSH X X TRIGGER_SPAWNED X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ({ "path" : "progs/ogre.mdl",	"frame": 63 });
+}
+Ogre Marksman.
+Unlike vanilla Quake, this is a slightly more accurate Orge.
+
+keep_ammo(integer) : "1 = Don't drop backpack upon death"
+snd_death(string) : "Path to custom death sound"
+snd_pain(string) : "Path to custom pain sound"
+snd_sight(string) : "Path to custom sight sound"
+snd_attack(string) : "Path to custom attack sound (CHAINSAW)"
+snd_idle(string) : "Path to custom idle sound (IDLE)"
+snd_misc(string) : "Path to custom sound (IDLE CHAINSAW DRAG)"
+snd_misc1(string) : "Path to custom sound (ATTACK GRUNT)"
+
+mdl_head(string) : "Path to custom head model"
+mdl_body(string) : "Path to custom body model"
+mdl_proj(string) : "Path to custom projectile model"
+skin_head(float) : "Skin index of custom head model"
+skin_proj(float) : "Skin index of custom projectile model"
+mdl_gib1(string) : "Path to custom 1st gib model"
+mdl_gib2(string) : "Path to custom 2nd gib model"
+mdl_gib3(string) : "Path to custom 3rd gib model"
+
+effects(choices) : "Add a visual effect to an entity"
+0 : "None (Default)"
+1 : "Brightfield (yellow particles)"
+4 : "Bright light"
+8 : "Dim light"
+
+berserk(choices) "Skips certain pain animations similar to skill 3 (Makes a semi-nightmare monster!)"
+0 : "Off (Default)"
+1 : "Berserk (skip pain animations)"
+
+delay(float) : "Delay spawn in for this amount of time"
+
+wait(choices) : "Play an effect when trigger spawned?"
+0 : "Teleport Effects (Default)"
+1 : "Spawn Silently"
+
+spawn_angry(Choices)
+0 : "Only when trigger spawned, default behavior - not angry"
+1 : "Only when trigger spawned, set to 1 to spawn angry at player"
+
+infight_mode(Choices)
+0 : "Default behavior, only with different classnames"
+1 : "Infight with monsters with the same classname but a different mdl_body"
+2 : "Infight with monsters with the same classname and model but a different skin"
+3 : "Infight no matter what"
+
+health(integer) : "Set this to a custom health amount"
+pain_target(string) : "Fire this target when pain_threshold is reached"
+pain_threshold(integer) : "Fire pain_target when health drops below this amount"
+sight_trigger(integer) : "1 = Fire target upon seeing the player instead of death"
+skin(integer) : "Skin index (default 0) Use this when your custom model has more than one skin to select"
+obit_name(string) : "When used with obit_method, this will set part of the text for a custom obituary. e.g. a Super Soldier! Using the examples here, the obituary would read: Player was eviscerated by a Super Solider!"
+obit_method(string) : "When used with obit_name, will set part of the text for a custom obituary. e.g. eviscerated - If empty, defaults to killed."
+damage_mod(float) : "USE WITH CAUTION! Multiply all damage from this monster by this number (e.g. 4 = Quad damage)"
+
 */
 void() monster_ogre_marksman =
 {
@@ -1040,9 +1464,10 @@ void() monster_ogre_marksman =
 		remove(self);
 		return;
 	}
-	precache_model ("progs/ogre.mdl");
-	precache_model ("progs/h_ogre.mdl");
-	precache_model ("progs/grenade.mdl");
+	// custom_mdls dumptruck_ds
+	precache_body_model ("progs/ogre.mdl");
+	precache_head_model ("progs/h_ogre.mdl");
+	precache_proj_model ("progs/grenade.mdl");
 
 	precache_sound_misc ("ogre/ogdrag.wav");
 	precache_sound_death ("ogre/ogdth.wav");
@@ -1059,19 +1484,32 @@ void() monster_ogre_marksman =
 	self.solid = SOLID_SLIDEBOX;
 	self.movetype = MOVETYPE_STEP;
 
-	setmodel (self, "progs/ogre.mdl");
+	// custom_mdls dumptruck_ds
+	body_model ("progs/ogre.mdl");
+	// setmodel (self, "progs/ogre.mdl");
 
 	setsize (self, VEC_HULL2_MIN, VEC_HULL2_MAX);
-
+	if (!self.proj_speed_mod)
+	{
+		self.proj_speed_mod = 1;
+	}
 	if (!self.health) //thanks RennyC -- dumptruck_ds
 	self.health = 200;
 
 	self.th_stand = ogre_stand1;
 	self.th_walk = ogre_walk1;
-	self.th_run = ogre_run1;
+	if (self.spawnflags & I_AM_TURRET)
+	{
+	  self.th_run = ogre2_turret_seek1;
+	}
+	else
+	{
+		self.th_run = ogre_run1;
+	}
 	self.th_die = ogre_die;
 	self.th_melee = ogre_melee;
 	self.th_missile = ogre2_nail1;
+	self.th_turret = ogre2_turret_attack1; //dumptruck_ds
 	if !(self.berserk) //Berserk test from http://celephais.net/board/view_thread.php?id=4&start=3465 -- dumptruck_ds
 	self.th_pain = ogre_pain;
 	else
@@ -1089,7 +1527,10 @@ void() monster_ogre_marksman =
 
 /* Scenic Dead Monster Patch stuff here from DeadStuff mod -- dumptruck_ds */
 
-/*QUAKED monster_dead_ogre (0 0.5 0.8) (-32 -32 -24) (32 32 64)
+/*QUAKED monster_dead_ogre (0 0.5 0.8) (-32 -32 -24) (32 32 64) SOLID ON_SIDE X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+	model ({"path":"progs/ogre.mdl","frame":135});
+}
 */
 void() monster_dead_ogre =
 {

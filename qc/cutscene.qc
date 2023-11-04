@@ -224,6 +224,7 @@ local   string  val;
     c.classname     = "player";
     cutscene = 0;       // Cutscene OFF
     stuffcmd (c, "-forward\n");
+    stuffcmd (c, "-strafe\n");
 
 // Look for any CVARSET entities to restore old cvars that
 // were changed for the cut-scene
@@ -274,6 +275,7 @@ void() look_ahead =
     self.velocity = self.mangle;
     self.fixangle = 1;
     cvar_set ("viewsize", "120");        //keep screen maximized
+
     if (self.delay == 0)
     {
         local   vector  looky;
@@ -483,6 +485,7 @@ local   vector  looky;
     cvar_set ("viewsize", "120");     //Full screen
     // PM:  Vision sets 'v_idlescale' for swaying screen.  Not in Drake!
     stuffcmd (self, "sizedown\nsizeup\n");   //hack-fix for GLquake
+    stuffcmd (self, "+strafe\n");
 
     setorigin (self, self.enemy.origin);
 
@@ -603,7 +606,8 @@ void() camera_touch =
 void() camera_point_touch = {camera_activate (other);};
 
 //============
-// --> QUAKED info_movie_camera (.5 .5 .5) (-8 -8 -8) (8 8 32)
+// --> QUAKED info_movie_camera (.5 .5 .5) (-8 -8 -8) (8 8 32) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 // This is the destination marker for a camera.  It should have a "targetname"
 // field with the same value as a camera-trigger's "target" field.
 //============
@@ -671,29 +675,15 @@ local   entity  control, temp;
 };
 
 void() trigger_gocamera = {self.use = gocam_use;};
-//- - - - - - - - -
 
-//============
-// --> QUAKED info_focal_point (.5 .5 .5) (-8 -8 -8) (8 8 32)
-// This is the point that the camera will face.  It should have a "targetname"
-// field with the same value as a camera-trigger's "focal_point" field.
-//
+/*QUAKED info_focal_point (.5 .5 .5) (-8 -8 -8) (8 8 32) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+This is the point that the camera will face.  It should have a "targetname"
+field with the same value as a camera-trigger's "focal_point" field.
+*/
 // PM:  This entity is kept only for map compatibility reasons.
 // Otherwise, this entity is redundant.  Use 'info_notnull' instead.
-//============
 void() info_focal_point = {};   // just holds a spot for the focal point.
 
-//============
-// --> QUAKED trigger_camera (.5 .5 .5) ?
-// A player touching this will be transported to the corresponding
-// info_movie_camera entity.  You must set the "target" field, and put a
-// info_movie_camera with a "targetname" field that matches.  The "script"
-// key gives a starting script number, and the "script_delay" key is the
-// amount of time(seconds) to stay on the first script page.
-//
-// If the trigger_camera has a targetname, it will only enter camera mode
-// after it has been fired.
-//============
 void(float pt) trigger_camera_spawn =
 {
 // Update:  Don't let dmsp muck up cutscenes and vice versa.
@@ -718,9 +708,26 @@ void(float pt) trigger_camera_spawn =
     self.use = camera_use;
 };
 
-void() trigger_camera = {trigger_camera_spawn (FALSE);};
-void() trigger_camera_point = {trigger_camera_spawn (TRUE);};
+/*QUAKED trigger_camera (.5 .5 .5) ? X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+A player touching this will be transported to the corresponding
+info_movie_camera entity.  You must set the "target" field, and put a
+info_movie_camera with a "targetname" field that matches.  The "script"
+key gives a starting script number, and the "script_delay" key is the
+amount of time(seconds) to stay on the first script page.
 
+If the trigger_camera has a targetname, it will only enter camera mode
+after it has been fired.
+*/
+void() trigger_camera = {trigger_camera_spawn (FALSE);};
+
+/*QUAKED trigger_camera_point (.5 .5 .5) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+When this is triggered the player will be transported to the corresponding
+info_movie_camera entity.  You must set the "target" field, and put a
+info_movie_camera with a "targetname" field that matches.  The "script"
+key gives a starting script number, and the "script_delay" key is the
+amount of time(seconds) to stay on the first script page.
+*/
+void() trigger_camera_point = {trigger_camera_spawn (TRUE);};
 
 //----------------------------------
 //       Scripting function - dhm
@@ -821,7 +828,8 @@ void() script_sound_play =
 };
 //- - - - - - - - -
 //============
-// --> QUAKED info_script_sound (.5 .5 .5) (-8 -8 -8) (8 8 32)
+// --> QUAKED info_script_sound (.5 .5 .5) (-8 -8 -8) (8 8 32) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 // This is the noise player for a script.
 
 void() info_script_sound =

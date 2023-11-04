@@ -71,7 +71,32 @@ void() shal_attack8     =[      $attack8,       shal_attack9    ] {ai_face();};
 void() shal_attack9     =[      $attack9,       shal_attack10   ] {ShalMissile();};
 void() shal_attack10    =[      $attack10,      shal_attack11   ] {ai_face();};
 void() shal_attack11    =[      $attack11,      shal_run1   ] {};
-
+//////////////////////////
+/// new frames for turret mode START
+//////////////////////////
+void() shal_turret_attack1     =[      $attack1,       shal_turret_attack2    ] {
+sound_attack (self, CHAN_VOICE, "shalrath/attack.wav", 1, ATTN_NORM);
+ai_face();
+};
+void() shal_turret_attack2     =[      $attack2,       shal_turret_attack3    ] {ai_face();};
+void() shal_turret_attack3     =[      $attack3,       shal_turret_attack4    ] {ai_face();};
+void() shal_turret_attack4     =[      $attack4,       shal_turret_attack5    ] {ai_face();};
+void() shal_turret_attack5     =[      $attack5,       shal_turret_attack6    ] {ai_face();};
+void() shal_turret_attack6     =[      $attack6,       shal_turret_attack7    ] {ai_face();};
+void() shal_turret_attack7     =[      $attack7,       shal_turret_attack8    ] {ai_face();};
+void() shal_turret_attack8     =[      $attack8,       shal_turret_attack9    ] {ai_face();};
+void() shal_turret_attack9     =[      $attack9,       shal_turret_attack10   ] {ShalMissile();};
+void() shal_turret_attack10    =[      $attack10,      shal_turret_attack11   ] {ai_face();};
+void() shal_turret_attack11    =[      $attack11,      shal_turret_attack12   ] {ai_face();};
+void() shal_turret_attack12    =[      $walk1,      	 shal_turret_attack13		] {ai_face();};
+void() shal_turret_attack13  	 =[      $walk1,      	 shal_turret_attack14		] {ai_face();};
+void() shal_turret_attack14    =[      $walk1,      	 shal_turret_attack15 	] {ai_face();};
+void() shal_turret_attack15    =[      $walk1,      	 shal_seek_stand1		    ] {ai_run(0);};
+void() shal_seek_stand1   		 =[      $walk1,      	 shal_seek_stand2		    ] {ai_run(0);};
+void() shal_seek_stand2    		 =[      $walk1,      	 shal_seek_stand1    		] {ai_run(0);};
+//////////////////////////
+/// new frames for turret mode END
+//////////////////////////
 void() shal_pain1       =[      $pain1, shal_pain2      ] {};
 void() shal_pain2       =[      $pain2, shal_pain3      ] {};
 void() shal_pain3       =[      $pain3, shal_pain4      ] {};
@@ -92,9 +117,12 @@ void(entity attacker, float damage) shalrath_pain =
 	if (self.pain_finished > time)
 		return;
 
-	sound_pain (self, CHAN_VOICE, "shalrath/pain.wav", 1, ATTN_NORM);
-	shal_pain1();
+	sound_pain (self, CHAN_AUTO, "shalrath/pain.wav", 1, ATTN_NORM); //CHAN_AUTO was voice - dumptruck_ds
 	self.pain_finished = time + 3;
+	if (self.spawnflags & I_AM_TURRET)
+	return;
+	else
+	shal_pain1();
 };
 
 void() shalrath_die =
@@ -138,13 +166,14 @@ void() shalrath_die =
 		{
 			ThrowGib ("progs/gib3.mdl", self.health);
 		}
+		DropStuff();
 		return;
 	}
-
+	// insert death sounds here
 	sound_death (self, CHAN_VOICE, "shalrath/death.wav", 1, ATTN_NORM);
+	DropStuff();
 	shal_death1();
 	self.solid = SOLID_NOT;
-	// insert death sounds here
 };
 
 /*
@@ -153,7 +182,6 @@ ShalMissile
 ================
 */
 void() ShalMissileTouch;
-void() ShalHome;
 void() ShalMissile =
 {
 	local	entity 	missile;
@@ -162,7 +190,7 @@ void() ShalMissile =
 
 	dir = normalize((self.enemy.origin + '0 0 10') - self.origin);
 	dist = vlen (self.enemy.origin - self.origin);
-	flytime = dist * 0.002;
+	flytime = dist * 0.002 * (1/self.proj_speed_mod);
 	if (flytime < 0.1)
 		flytime = 0.1;
 
@@ -198,31 +226,24 @@ void() ShalMissile =
 	setsize (missile, '0 0 0', '0 0 0');
 
 	missile.origin = self.origin + '0 0 10';
-	missile.velocity = dir * 400;
-	missile.avelocity = '300 300 300';
-	missile.nextthink = flytime + time;
-	missile.think = ShalHome;
+	SetSpeed(missile, dir, 400 * self.proj_speed_mod);
+	missile.avelocity = self.avelocity; // custom spin on projectile --dumptruck_ds
+	if !(missile.avelocity)
+		missile.avelocity = '300 300 300';
+	if (self.homing > 0) // If homing is off, don't bother doing any thinking
+	{
+		missile.homing = self.homing;
+		missile.nextthink = flytime + time;
+		missile.think = MissileHome;
+	}
+	if (skill == 3)
+		missile.proj_basespeed = 350 * self.proj_speed_mod;
+	else
+		missile.proj_basespeed = 250 * self.proj_speed_mod;
 	missile.enemy = self.enemy;
 	missile.touch = ShalMissileTouch;
 };
 
-void() ShalHome =
-{
-	local vector	dir, vtemp;
-	vtemp = self.enemy.origin + '0 0 10';
-	if (self.enemy.health < 1)
-	{
-		remove(self);
-		return;
-	}
-	dir = normalize(vtemp - self.origin);
-	if (skill == 3)
-		self.velocity = dir * 350;
-	else
-		self.velocity = dir * 250;
-	self.nextthink = time + 0.2;
-	self.think = ShalHome;
-};
 
 // void() ShalMissileTouch = --moved to misc.qc for voreball shooter --dumptruck_ds
 // {
@@ -249,7 +270,66 @@ void() ShalHome =
 
 //=================================================================
 
-/*QUAKED monster_shalrath (1 0 0) (-32 -32 -24) (32 32 48) Ambush
+/*QUAKED monster_shalrath (1 0 0) (-32 -32 -24) (32 32 48) AMBUSH X X TRIGGER_SPAWNED X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+	model ({ "path" : "progs/shalrath.mdl",	"frame": 23 });
+}
+Vore.
+
+Default health = 400
+
+snd_death(string) : "Path to custom death sound"
+snd_pain(string) : "Path to custom pain sound"
+snd_sight(string) : "Path to custom sight sound"
+snd_attack(string) : "Path to custom attack sound (VORE SNARL)"
+snd_idle(string) : "Path to custom idle sound"
+snd_misc(string) : "Path to custom attack2 sound (VOREBALL FIRE)"
+
+mdl_head(string) : "Path to custom head model"
+mdl_body(string) : "Path to custom body model"
+mdl_proj(string) : "Path to custom projectile model"
+skin_head(float) : "Skin index of custom head model"
+skin_proj(float) : "Skin index of custom projectile model"
+mdl_gib1(string) : "Path to custom 1st gib model"
+mdl_gib2(string) : "Path to custom 2nd gib model"
+mdl_gib3(string) : "Path to custom 3rd gib model"
+
+effects(choices) : "Add a visual effect to an entity"
+0 : "None (Default)"
+1 : "Brightfield (yellow particles)"
+4 : "Bright light"
+8 : "Dim light"
+
+berserk(choices) "Skips certain pain animations similar to skill 3 (Makes a semi-nightmare monster!)"
+0 : "Off (Default)"
+1 : "Berserk (skip pain animations)"
+
+delay(float) : "Delay spawn in for this amount of time"
+
+wait(choices) : "Play an effect when trigger spawned?"
+0 : "Teleport Effects (Default)"
+1 : "Spawn Silently"
+
+spawn_angry(Choices)
+0 : "Only when trigger spawned, default behavior - not angry"
+1 : "Only when trigger spawned, set to 1 to spawn angry at player"
+
+infight_mode(Choices)
+0 : "Default behavior, only with different classnames"
+1 : "Infight with monsters with the same classname but a different mdl_body"
+2 : "Infight with monsters with the same classname and model but a different skin"
+3 : "Infight no matter what"
+
+health(integer) : "Set this to a custom health amount"
+pain_target(string) : "Fire this target when pain_threshold is reached"
+pain_threshold(integer) : "Fire pain_target when health drops below this amount"
+sight_trigger(integer) : "1 = Fire target upon seeing the player instead of death"
+skin(integer) : "Skin index (default 0) Use this when your custom model has more than one skin to select"
+obit_name(string) : "When used with obit_method, this will set part of the text for a custom obituary. e.g. a Super Soldier! Using the examples here, the obituary would read: Player was eviscerated by a Super Solider!"
+obit_method(string) : "When used with obit_name, will set part of the text for a custom obituary. e.g. eviscerated - If empty, defaults to killed."
+damage_mod(float) : "USE WITH CAUTION! Multiply all damage from this monster by this number (e.g. 4 = Quad damage)"
+homing(float) : "Amount that the projectile should home in target. 1 is default, 0 is none."
+
 */
 void() monster_shalrath =
 {
@@ -287,16 +367,38 @@ void() monster_shalrath =
 	if (!self.health) //thanks RennyC -- dumptruck_ds
 	self.health = 400;
 
+	if (!self.proj_speed_mod)
+	{
+		self.proj_speed_mod = 1;
+	}
+
+	if (!self.homing) // default to normal
+	{
+		self.homing = 1;
+	}
+	else if (self.homing < 0) // disable with negative
+	{
+		self.homing = 0;
+	}
+
 	self.th_stand = shal_stand;
 	self.th_walk = shal_walk1;
-	self.th_run = shal_run1;
+	if (self.spawnflags & I_AM_TURRET)
+	{
+		self.th_run = shal_seek_stand1;
+	}
+	else
+	{
+		self.th_run = shal_run1;
+	}
+
 	self.th_die = shalrath_die;
 	if !(self.berserk) //Berserk test from http://celephais.net/board/view_thread.php?id=4&start=3465 -- dumptruck_ds
 	self.th_pain = shalrath_pain;
 	else
 	self.th_pain = SUB_NullPain;
 	self.th_missile = shal_attack1;
-
+	self.th_turret = shal_turret_attack1;
 	self.think = walkmonster_start;
 	self.nextthink = time + 0.1 + random ()*0.1;
 
@@ -304,7 +406,10 @@ void() monster_shalrath =
 
 /* Scenic Dead Monster Patch stuff here from DeadStuff mod -- dumptruck_ds */
 
-/*QUAKED monster_dead_shalrath (0 0.5 0.8) (-32 -32 -24) (32 32 64)
+/*QUAKED monster_dead_shalrath (0 0.5 0.8) (-32 -32 -24) (32 32 64) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+	model ({"path":"progs/shalrath.mdl","frame":22});
+}
 */
 void() monster_dead_shalrath =
 {

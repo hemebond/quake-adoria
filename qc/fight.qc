@@ -29,15 +29,15 @@ void() ai_face;
 
 float	enemy_vis, enemy_infront, enemy_range;
 float	enemy_yaw;
-
+void() zombie_turret_missile;
 
 void() knight_attack =
 {
 	local float		len;
-	
+
 // decide if now is a good swing time
 	len = vlen(self.enemy.origin+self.enemy.view_ofs - (self.origin+self.view_ofs));
-	
+
 	if (len<80)
 		knight_atk1 ();
 	else
@@ -56,23 +56,69 @@ Returns FALSE if movement should continue
 */
 float() CheckAttack =
 {
-	local vector	spot1, spot2;	
+	local vector	spot1, spot2;
 	local entity	targ;
 	local float		chance;
 
+	if (self.spawnflags & I_AM_TURRET) //dumptruck_ds
+		{
+			// dprint("CheckAttack...\n");
+			if ((self.classname) == ("monster_enforcer"))
+				{
+					if (self.style == 4) // lightning can only go so far
+					{
+						if (vlen(spot1 - spot2) > 900)
+						{
+							return FALSE;
+						}
+					}
+					self.attack_state = AS_MISSILE;
+				}
+			else if ((self.classname) == ("monster_hell_knight"))
+				{
+				if (self.style == 1) // lightning can only go so far
+					{
+						if (vlen(spot1 - spot2) > 900)
+						{
+							return FALSE;
+						}
+					}
+					// self.attack_state = AS_MISSILE;
+					self.th_turret ();
+				}
+			else if ((self.classname) == ("monster_shalrath"))
+				{
+					self.th_turret ();
+				}
+			else if ((self.classname) == ("monster_zombie"))
+				{
+					// dprint("CheckAttack...\n");
+					zombie_turret_missile();
+				}
+			SUB_AttackFinished (2*random());
+			return TRUE;
+		}
+
 	targ = self.enemy;
-	
+
 // see if any entities are in the way of the shot
 	spot1 = self.origin + self.view_ofs;
 	spot2 = targ.origin + targ.view_ofs;
 
 	traceline (spot1, spot2, FALSE, self);
 
+	if ((self.spawnflags & I_AM_TURRET) && (trace_ent != targ))
+	{
+		// dprint("trace_ent...\n");
+		self.attack_state = AS_TURRET;
+		return FALSE;
+	}
+
+	if (trace_inopen && trace_inwater)
+	return FALSE;			// sight line crossed contents
+
 	if (trace_ent != targ)
 		return FALSE;		// don't have a clear shot
-			
-	if (trace_inopen && trace_inwater)
-		return FALSE;			// sight line crossed contents
 
 	if (enemy_range == RANGE_MELEE)
 	{	// melee attack
@@ -85,17 +131,17 @@ float() CheckAttack =
 			return TRUE;
 		}
 	}
-	
+
 // missile attack
 	if (!self.th_missile)
 		return FALSE;
-		
+
 	if (time < self.attack_finished)
 		return FALSE;
-		
+
 	if (enemy_range == RANGE_FAR)
 		return FALSE;
-		
+
 	if (enemy_range == RANGE_MELEE)
 	{
 		chance = 0.9;
@@ -155,7 +201,7 @@ float(entity targ) range;
 
 void(float d) ai_charge =
 {
-	ai_face ();	
+	ai_face ();
 	movetogoal (d);		// done in C code...
 };
 
@@ -163,7 +209,7 @@ void() ai_charge_side =
 {
 	local	vector	dtemp;
 	local	float	heading;
-	
+
 // aim to the left of the enemy for a flyby
 
 	self.ideal_yaw = vectoyaw(self.enemy.origin - self.origin);
@@ -172,7 +218,7 @@ void() ai_charge_side =
 	makevectors (self.angles);
 	dtemp = self.enemy.origin - 30*v_right;
 	heading = vectoyaw(dtemp - self.origin);
-	
+
 	walkmove(heading, 20);
 };
 
@@ -190,12 +236,12 @@ void() ai_melee =
 
 	if (!self.enemy)
 		return;		// removed before stroke
-		
+
 	delta = self.enemy.origin - self.origin;
 
 	if (vlen(delta) > 60)
 		return;
-		
+
 	ldmg = (random() + random() + random()) * 3;
 	T_Damage (self.enemy, self, self, ldmg);
 };
@@ -208,9 +254,9 @@ void() ai_melee_side =
 
 	if (!self.enemy)
 		return;		// removed before stroke
-		
+
 	ai_charge_side();
-	
+
 	delta = self.enemy.origin - self.origin;
 
 	if (vlen(delta) > 60)
@@ -234,12 +280,23 @@ Returns FALSE if movement should continue
 */
 float() SoldierCheckAttack =
 {
-	local vector	spot1, spot2;	
+	local vector	spot1, spot2;
 	local entity	targ;
 	local float		chance;
 
+	// dprint("SoldierAttack\n");
+	if (self.spawnflags & I_AM_TURRET) //dumptruck_ds
+		{
+			// self.th_turret ();
+			self.attack_state = AS_MISSILE;
+			SUB_AttackFinished (1 + random());
+			if (random() < 0.3)
+				self.lefty = !self.lefty;
+			return TRUE;
+		}
+
 	targ = self.enemy;
-	
+
 // see if any entities are in the way of the shot
 	spot1 = self.origin + self.view_ofs;
 	spot2 = targ.origin + targ.view_ofs;
@@ -249,17 +306,23 @@ float() SoldierCheckAttack =
 	if (trace_inopen && trace_inwater)
 		return FALSE;			// sight line crossed contents
 
+	if ((self.spawnflags & I_AM_TURRET) && (trace_ent != targ))
+	{
+		// dprint("trace_ent...\n");
+		self.attack_state = AS_TURRET;
+		return FALSE;
+	}
+
 	if (trace_ent != targ)
 		return FALSE;	// don't have a clear shot
-			
-	
+
 // missile attack
 	if (time < self.attack_finished)
 		return FALSE;
-		
+
 	if (enemy_range == RANGE_FAR)
 		return FALSE;
-		
+
 	if (enemy_range == RANGE_MELEE)
 		chance = 0.9;
 	else if (enemy_range == RANGE_NEAR)
@@ -293,7 +356,7 @@ Returns FALSE if movement should continue
 */
 float() ShamCheckAttack =
 {
-	local vector	spot1, spot2;	
+	local vector	spot1, spot2;
 	local entity	targ;
 
 	if (enemy_range == RANGE_MELEE)
@@ -305,35 +368,59 @@ float() ShamCheckAttack =
 		}
 	}
 
+	if (self.spawnflags & I_AM_TURRET)
+		{
+			self.attack_state = AS_MISSILE;
+			SUB_AttackFinished (2 + 2*random());
+			return TRUE;
+		}
+
 	if (time < self.attack_finished)
 		return FALSE;
-	
+
 	if (!enemy_vis)
 		return FALSE;
-		
+
 	targ = self.enemy;
-	
+
 // see if any entities are in the way of the shot
 	spot1 = self.origin + self.view_ofs;
 	spot2 = targ.origin + targ.view_ofs;
 
-	if (vlen(spot1 - spot2) > 600)
-		return FALSE;
+
+	if (self.style == 0)
+		{
+			if (vlen(spot1 - spot2) > 600)
+			return FALSE;
+		}
+		if (self.spawnflags & I_AM_TURRET)
+		{
+			if (vlen(spot1 - spot2) > 900)
+			return FALSE;
+		}
+
+		// return FALSE;
 
 	traceline (spot1, spot2, FALSE, self);
 
 	if (trace_inopen && trace_inwater)
 		return FALSE;			// sight line crossed contents
 
+	if ((self.spawnflags & I_AM_TURRET) && (trace_ent != targ))
+	{
+		// dprint("trace_ent...\n");
+		self.attack_state = AS_TURRET;
+		return FALSE;
+	}
 	if (trace_ent != targ)
 	{
 		return FALSE;	// don't have a clear shot
 	}
-			
+
 // missile attack
-	if (enemy_range == RANGE_FAR)
+	if (self.style == 0 && enemy_range == RANGE_FAR)
 		return FALSE;
-		
+
 	self.attack_state = AS_MISSILE;
 	SUB_AttackFinished (2 + 2*random());
 	return TRUE;
@@ -351,9 +438,17 @@ Returns FALSE if movement should continue
 */
 float() OgreCheckAttack =
 {
-	local vector	spot1, spot2;	
+	local vector	spot1, spot2;
 	local entity	targ;
 	local float		chance;
+
+	// dprint("OgreCheckAttack\n");
+	if (self.spawnflags & I_AM_TURRET) //dumptruck_ds
+		{
+			self.attack_state = AS_MISSILE;
+			SUB_AttackFinished (2 + 2*random());
+			return TRUE;
+		}
 
 	if (enemy_range == RANGE_MELEE)
 	{
@@ -366,12 +461,12 @@ float() OgreCheckAttack =
 
 	if (time < self.attack_finished)
 		return FALSE;
-	
+
 	if (!enemy_vis)
 		return FALSE;
-		
+
 	targ = self.enemy;
-	
+
 // see if any entities are in the way of the shot
 	spot1 = self.origin + self.view_ofs;
 	spot2 = targ.origin + targ.view_ofs;
@@ -381,18 +476,26 @@ float() OgreCheckAttack =
 	if (trace_inopen && trace_inwater)
 		return FALSE;			// sight line crossed contents
 
+	if ((self.spawnflags & I_AM_TURRET) && (trace_ent != targ))
+	{
+		// dprint("trace_ent...\n");
+		self.attack_state = AS_TURRET;
+		return FALSE;
+	}
+
 	if (trace_ent != targ)
 	{
 		return FALSE;	// don't have a clear shot
 	}
-			
+
+
 // missile attack
 	if (time < self.attack_finished)
 		return FALSE;
-		
+
 	if (enemy_range == RANGE_FAR)
 		return FALSE;
-		
+
 	else if (enemy_range == RANGE_NEAR)
 		chance = 0.10;
 	else if (enemy_range == RANGE_MID)
@@ -404,4 +507,3 @@ float() OgreCheckAttack =
 	SUB_AttackFinished (1 + 2*random());
 	return TRUE;
 };
-

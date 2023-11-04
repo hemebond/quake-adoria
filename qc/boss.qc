@@ -218,7 +218,7 @@ void(vector p) boss_missile =
 
 	vec = normalize (d - org);
 
-	launch_spike (org, vec);
+	launch_spike2 (org, vec, 300);
 	// setmodel (newmis, "progs/lavaball.mdl");
 	if (self.mdl_proj != "") // dumptruck_ds custom_mdls
 	{
@@ -240,7 +240,6 @@ void(vector p) boss_missile =
 
 	newmis.avelocity = '200 100 300';
 	setsize (newmis, VEC_ORIGIN, VEC_ORIGIN);
-	newmis.velocity = vec*300;
 	newmis.touch = T_MissileTouch; // rocket explosion
 	sound_attack (self, CHAN_WEAPON, "boss1/throw.wav", 1, ATTN_NORM);
 
@@ -285,6 +284,9 @@ void() monster_boss =
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
 		return;
 
+	if (self.spawnflags & I_AM_TURRET)
+		objerror("Incompatible spawnflag: TURRET_MODE\n");
+
 	if (deathmatch)
 	{
 		remove(self);
@@ -307,6 +309,7 @@ void() monster_boss =
 	total_monsters = total_monsters + 1;
 
 	self.flags = FL_MONSTER;
+	self.touch = monster_touch;	// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten
 	self.use = boss_awake;
 };
 
@@ -400,7 +403,7 @@ void() lightning_use =
 };
 
 
-/*QUAKED event_lightning (0 1 1) (-16 -16 -16) (16 16 16)
+/*QUAKED event_lightning (0 1 1) (-16 -16 -16) (16 16 16) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
 Just for boss level.
 */
 void() event_lightning =

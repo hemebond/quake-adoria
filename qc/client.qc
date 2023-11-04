@@ -9,27 +9,9 @@ void (vector org, entity death_owner) spawn_tdeath;
 
 
 float	modelindex_eyes, modelindex_player;
+void() SUB_CheckWaiting; // in triggers.qc
 
-/*
-=============================================================================
 
-				LEVEL CHANGING / INTERMISSION
-
-=============================================================================
-*/
-
-float	intermission_running;
-float	intermission_exittime;
-
-/*QUAKED info_intermission (1 0.5 0.5) (-16 -16 -16) (16 16 16)
-This is the camera point for the intermission.
-Use mangle instead of angle, so you can set pitch or roll as well as yaw.  'pitch roll yaw'
-*/
-void() info_intermission =
-{
-	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
-		return;
-};
 
 
 
@@ -112,305 +94,13 @@ void() DecodeLevelParms =
 	self.armortype = parm9 * 0.01;
 };
 
-/*
-============
-FindIntermission
-
-Returns the entity to view from
-============
-*/
-entity() FindIntermission =
+void(entity client, string savename) autosave =
 {
-	local	entity spot;
-	local	float cyc;
-
-// look for info_intermission first
-	spot = find (world, classname, "info_intermission");
-	if (spot)
-	{	// pick a random one
-		cyc = random() * 4;
-		while (cyc > 1)
-		{
-			spot = find (spot, classname, "info_intermission");
-			if (!spot)
-				spot = find (spot, classname, "info_intermission");
-			cyc = cyc - 1;
-		}
-		return spot;
-	}
-
-// then look for the start position
-	spot = find (world, classname, "info_player_start");
-	if (spot)
-		return spot;
-
-// testinfo_player_start is only found in regioned levels
-	spot = find (world, classname, "testplayerstart");
-	if (spot)
-		return spot;
-
-	objerror ("FindIntermission: no spot");
-		return world;// just to suppress the compiler warning
-};
-
-
-string nextmap;
-void() GotoNextMap =
-{
-	if (cvar("samelevel"))	// if samelevel is set, stay on same level
-		changelevel (mapname);
-	else
-		changelevel (nextmap);
-};
-
-
-void() ExitIntermission =
-{
-// skip any text in deathmatch
-	if (deathmatch)
-	{
-		GotoNextMap ();
-		return;
-	}
-
-	intermission_exittime = time + 1;
-	intermission_running = intermission_running + 1;
-
-//
-// run some text if at the end of an episode
-//
-	if (intermission_running == 2)
-	{
-		if (world.model == "maps/e1m7.bsp")
-		{
-			WriteByte (MSG_ALL, SVC_CDTRACK);
-			WriteByte (MSG_ALL, 2);
-			WriteByte (MSG_ALL, 3);
-			if (!cvar("registered"))
-			{
-				WriteByte (MSG_ALL, SVC_FINALE);
-				WriteString (MSG_ALL, "As the corpse of the monstrous entity\nChthon sinks back into the lava whence\nit rose, you grip the Rune of Earth\nMagic tightly. Now that you have\nconquered the Dimension of the Doomed,\nrealm of Earth Magic, you are ready to\ncomplete your task in the other three\nhaunted lands of Quake. Or are you? If\nyou don't register Quake, you'll never\nknow what awaits you in the Realm of\nBlack Magic, the Netherworld, and the\nElder World!");
-			}
-			else
-			{
-				WriteByte (MSG_ALL, SVC_FINALE);
-				WriteString (MSG_ALL, "As the corpse of the monstrous entity\nChthon sinks back into the lava whence\nit rose, you grip the Rune of Earth\nMagic tightly. Now that you have\nconquered the Dimension of the Doomed,\nrealm of Earth Magic, you are ready to\ncomplete your task. A Rune of magic\npower lies at the end of each haunted\nland of Quake. Go forth, seek the\ntotality of the four Runes!");
-			}
-			return;
-		}
-		else if (world.model == "maps/e2m6.bsp")
-		{
-			WriteByte (MSG_ALL, SVC_CDTRACK);
-			WriteByte (MSG_ALL, 2);
-			WriteByte (MSG_ALL, 3);
-
-			WriteByte (MSG_ALL, SVC_FINALE);
-			WriteString (MSG_ALL, "The Rune of Black Magic throbs evilly in\nyour hand and whispers dark thoughts\ninto your brain. You learn the inmost\nlore of the Hell-Mother; Shub-Niggurath!\nYou now know that she is behind all the\nterrible plotting which has led to so\nmuch death and horror. But she is not\ninviolate! Armed with this Rune, you\nrealize that once all four Runes are\ncombined, the gate to Shub-Niggurath's\nPit will open, and you can face the\nWitch-Goddess herself in her frightful\notherworld cathedral.");
-			return;
-		}
-		else if (world.model == "maps/e3m6.bsp")
-		{
-			WriteByte (MSG_ALL, SVC_CDTRACK);
-			WriteByte (MSG_ALL, 2);
-			WriteByte (MSG_ALL, 3);
-
-			WriteByte (MSG_ALL, SVC_FINALE);
-			WriteString (MSG_ALL, "The charred viscera of diabolic horrors\nbubble viscously as you seize the Rune\nof Hell Magic. Its heat scorches your\nhand, and its terrible secrets blight\nyour mind. Gathering the shreds of your\ncourage, you shake the devil's shackles\nfrom your soul, and become ever more\nhard and determined to destroy the\nhideous creatures whose mere existence\nthreatens the souls and psyches of all\nthe population of Earth.");
-			return;
-		}
-		else if (world.model == "maps/e4m7.bsp")
-		{
-			WriteByte (MSG_ALL, SVC_CDTRACK);
-			WriteByte (MSG_ALL, 2);
-			WriteByte (MSG_ALL, 3);
-
-			WriteByte (MSG_ALL, SVC_FINALE);
-			WriteString (MSG_ALL, "Despite the awful might of the Elder\nWorld, you have achieved the Rune of\nElder Magic, capstone of all types of\narcane wisdom. Beyond good and evil,\nbeyond life and death, the Rune\npulsates, heavy with import. Patient and\npotent, the Elder Being Shub-Niggurath\nweaves her dire plans to clear off all\nlife from the Earth, and bring her own\nfoul offspring to our world! For all the\ndwellers in these nightmare dimensions\nare her descendants! Once all Runes of\nmagic power are united, the energy\nbehind them will blast open the Gateway\nto Shub-Niggurath, and you can travel\nthere to foil the Hell-Mother's plots\nin person.");
-			return;
-		}
-
-		GotoNextMap();
-	}
-
-	if (intermission_running == 3)
-	{
-		if (!cvar("registered"))
-		{	// shareware episode has been completed, go to sell screen
-			WriteByte (MSG_ALL, SVC_SELLSCREEN);
-			return;
-		}
-
-		if ( (serverflags&15) == 15)
-		{
-			WriteByte (MSG_ALL, SVC_FINALE);
-			WriteString (MSG_ALL, "Now, you have all four Runes. You sense\ntremendous invisible forces moving to\nunseal ancient barriers. Shub-Niggurath\nhad hoped to use the Runes Herself to\nclear off the Earth, but now instead,\nyou will use them to enter her home and\nconfront her as an avatar of avenging\nEarth-life. If you defeat her, you will\nbe remembered forever as the savior of\nthe planet. If she conquers, it will be\nas if you had never been born.");
-			return;
-		}
-
-	}
-
-	GotoNextMap();
-};
-
-/*
-============
-IntermissionThink
-
-When the player presses attack or jump, change to the next level
-============
-*/
-void() IntermissionThink =
-{
-	if (time < intermission_exittime)
-		return;
-
-	if (!self.button0 && !self.button1 && !self.button2)
-		return;
-
-	ExitIntermission ();
-};
-
-void() execute_changelevel =
-{
-	local entity	pos;
-
-	intermission_running = 1;
-
-// enforce a wait time before allowing changelevel
-	if (deathmatch)
-		intermission_exittime = time + 5;
-	else
-		intermission_exittime = time + 2;
-
-	WriteByte (MSG_ALL, SVC_CDTRACK);
-	WriteByte (MSG_ALL, 3);
-	WriteByte (MSG_ALL, 3);
-
-	pos = FindIntermission ();
-
-	other = find (world, classname, "player");
-	while (other != world)
-	{
-		other.view_ofs = '0 0 0';
-		other.angles = other.v_angle = pos.mangle;
-		other.fixangle = TRUE;		// turn this way immediately
-		other.nextthink = time + 0.5;
-		other.takedamage = DAMAGE_NO;
-		other.solid = SOLID_NOT;
-		other.movetype = MOVETYPE_NONE;
-		other.modelindex = 0;
-		setorigin (other, pos.origin);
-		other = find (other, classname, "player");
-	}
-	// Drake -- dumptruck_ds
-	if (cutscene)
-	{   // If player was in a cutscene when the level ended, restore viewsize.
-			pos = find (world, classname, "camera");
-			if (pos)
-			{
-					local   string  val;
-
-					val = ftos (pos.cnt);
-					cvar_set ("viewsize", val);
-			}
-	}
-
-	WriteByte (MSG_ALL, SVC_INTERMISSION);
-};
-
-
-void() changelevel_touch =
-{
-
-	// from Copper -- dumptruck_ds
-	if (!CheckValidTouch()) return;
-
-	if ((cvar("noexit") == 1) || ((cvar("noexit") == 2) && (mapname != "start")))
-	{
-		T_Damage (other, self, self, 50000);
-		return;
-	}
-
-	if (coop || deathmatch)
-	{
-		bprint (other.netname);
-		bprint (" exited the level\n");
-	}
-
-	nextmap = self.map;
-
-	SUB_UseTargets ();
-	if ( (self.spawnflags & 16) && (deathmatch == 0) ) //use info_player_start2 -- dumptruck_ds
-	{
-	sigil_touch2();
-	}
-
-	if ( (self.spawnflags & 1) && (deathmatch == 0) )
-	{	// NO_INTERMISSION
-		GotoNextMap();
-		return;
-	}
-
-
-	self.touch = SUB_Null;
-
-// we can't move people right now, because touch functions are called
-// in the middle of C movement code, so set a think time to do it
-	self.think = execute_changelevel;
-	self.nextthink = time + 0.1;
-};
-
-/*QUAKED trigger_changelevel (0.5 0.5 0.5) ? NO_INTERMISSION
-When the player touches this, he gets sent to the map listed in the "map" variable.  Unless the NO_INTERMISSION flag is set, the view will go to the info_intermission spot and display stats.
-*/
-
-void() dt_exit_toggle = //dumptruck_ds based on hipnotic blocker_use
-
-{
-if ( !self.state )
-	{
-		self.state = 1;
-	setorigin( self, self.origin - '8000 8000 8000');
-	}
-else
-	{
-		self.state = 0;
-	setorigin( self, self.origin + '8000 8000 8000');
-	}
-};
-/*
-dumptruck_ds
-
-If DT_EXITOFF flag is set, this moves the trigger
-brush out of the playable area. This can be targeted
-and toggled off and on.
- */
-
-float DT_EXITOFF = 8;
-
-void() trigger_changelevel =
-{
-	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
-		return;
-
-	self.use = dt_exit_toggle; //dumptruck_ds
-	if (!self.map)
-		objerror ("changelevel trigger doesn't have map");
-
-	if ( self.spawnflags & DT_EXITOFF ) //dumptruck_ds
-		 {
-		 self.state = 0;
-		 setorigin( self, self.origin + '8000 8000 8000' );
-		 }
-	else
-		{
-		 self.state = 1;
-		}
-
-	InitTrigger ();
-	self.touch = changelevel_touch;
-
-};
+	//autosavename = savename;
+	stuffcmd(client, "echo Autosaving...; wait; save ");
+	stuffcmd(client, savename);
+	stuffcmd(client, "\n");
+}
 
 /*
 =============================================================================
@@ -458,7 +148,12 @@ Player entered the suicide command
 ============
 */
 void() ClientKill =
+
 {
+	// 1998-07-27 Suicide during intermission fix by Zhenga  start
+	if ((intermission_running)&&((coop)||(deathmatch)))  // not allowed during intermission
+		return;
+// 1998-07-27 Suicide during intermission fix by Zhenga  end
 	bprint (self.netname);
 	bprint (" suicides\n");
 	set_suicide_frame ();
@@ -549,7 +244,7 @@ called each time a player is spawned
 */
 void() DecodeLevelParms;
 void() PlayerDie;
-
+void() monster_touch;		// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten
 
 void() PutClientInServer =
 {
@@ -592,7 +287,7 @@ void() PutClientInServer =
 	self.attack_finished = time;
 	self.th_pain = player_pain;
 	self.th_die = PlayerDie;
-
+	self.touch = monster_touch;	// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten
 	self.deadflag = DEAD_NO;
 // paustime is set by teleporters to keep the player from moving a while
 	self.pausetime = 0;
@@ -602,6 +297,20 @@ void() PutClientInServer =
 	self.origin = spot.origin + '0 0 1';
 	self.angles = spot.angles;
 	self.fixangle = TRUE;		// turn this way immediately
+
+	// fog control.
+	// Looks if there's any fog values set at the current spawn point. If not, looks for those in worldspawn instead
+	if (spot.fog_density)
+		fog_save(self, spot.fog_density, spot.fog_color);
+	else if (world.fog_density)
+		fog_save(self, world.fog_density, world.fog_color);
+
+	if (spot.skyfog_density)
+		skyfog_save(self, spot.skyfog_density);
+	else if (world.skyfog_density)
+		skyfog_save(self, world.skyfog_density);
+
+	cleanUpClientStuff = 2; // decreased on subsequent frames, used to startup some fog-related stuff
 
 // oh, this is a hack!
 	setmodel (self, "progs/eyes.mdl");
@@ -617,6 +326,9 @@ void() PutClientInServer =
 	setsize (self, VEC_HULL_MIN, VEC_HULL_MAX);
 
 	self.view_ofs = '0 0 22';
+// Mod - Xian (May.20.97)
+// Bug where player would have velocity from their last kill
+	self.velocity = '0 0 0';	// 1998-07-21 Player moves after respawn fix by Xian
 
 	player_stand1 ();
 
@@ -639,7 +351,10 @@ void() PutClientInServer =
 */
 
 
-/*QUAKED info_player_start (1 0 0) (-16 -16 -24) (16 16 24)
+/*QUAKED info_player_start (1 0 0) (-16 -16 -24) (16 16 24) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/player.mdl");
+}
 The normal starting point for a level.
 */
 void() info_player_start =
@@ -649,7 +364,10 @@ void() info_player_start =
 };
 
 
-/*QUAKED info_player_start2 (1 0 0) (-16 -16 -24) (16 16 24)
+/*QUAKED info_player_start2 (1 0 0) (-16 -16 -24) (16 16 24) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/player.mdl");
+}
 Only used on start map for the return point from an episode.
 */
 void() info_player_start2 =
@@ -666,7 +384,10 @@ void() testplayerstart =
 {
 };
 
-/*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 24)
+/*QUAKED info_player_deathmatch (1 0 1) (-16 -16 -24) (16 16 24) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/player.mdl");
+}
 potential spawning position for deathmatch games
 */
 void() info_player_deathmatch =
@@ -675,7 +396,10 @@ void() info_player_deathmatch =
 		return;
 };
 
-/*QUAKED info_player_coop (1 0 1) (-16 -16 -24) (16 16 24)
+/*QUAKED info_player_coop (1 0 1) (-16 -16 -24) (16 16 24) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/player.mdl");
+}
 potential spawning position for coop games
 */
 void() info_player_coop =
@@ -684,7 +408,10 @@ void() info_player_coop =
 		return;
 };
 
-/*QUAKED info_monster_spawnpoint (1 0 1) (-16 -16 -24) (16 16 24)
+/*QUAKED info_monster_spawnpoint (1 0 1) (-16 -16 -24) (16 16 24) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+model ("progs/teleport.mdl");
+}
  spawning position for func_monster_spawner
 */
 void() info_monster_spawnpoint =
@@ -781,13 +508,13 @@ void() CheckRules =
 	timelimit = cvar("timelimit") * 60;
 	fraglimit = cvar("fraglimit");
 
-	if (timelimit && time >= timelimit)
+if (deathmatch && timelimit && time >= timelimit)	// 1998-07-27 Timelimit/Fraglimit fix by Maddes
 	{
 		NextLevel ();
 		return;
 	}
 
-	if (fraglimit && self.frags >= fraglimit)
+if (deathmatch && fraglimit && self.frags >= fraglimit)	// 1998-07-27 Timelimit/Fraglimit fix by Maddes
 	{
 		NextLevel ();
 		return;
@@ -1068,6 +795,10 @@ void() PlayerPreThink =
 		do_ladder_physics = FALSE;
 		self.gravity = self.wantedgravity;
 	}
+
+	// If just spawned in, try to recover previous fog values from own client entity, if any
+	if (cleanUpClientStuff)
+		fog_setFromEnt(self, self);
 
 	makevectors (self.v_angle);		// is this still used
 
@@ -1430,7 +1161,22 @@ void(entity targ, entity inflictor, entity attacker) ClientObituary =
 			targ.frags = targ.frags - 1;
 			return;
 		}
-
+// 1998-07-26 Pentagram telefrag fix by Zoid/Maddes  start
+		// double 666 telefrag
+		// (can happen often in deathmatch 4 and levels with more than one pentagram)
+		if (attacker.classname == "teledeath3")
+		{
+			bprint (targ.netname);
+			bprint (" was telefragged by ");
+			bprint (attacker.owner.netname);
+			bprint ("'s Satan's power\n");
+// 1998-07-26 only telefrag player on spot by Maddes  start
+//			targ.frags = targ.frags - 1;
+			attacker.owner.frags = attacker.owner.frags + 1;
+// 1998-07-26 only telefrag player on spot by Maddes  end
+			return;
+		}
+// 1998-07-26 Pentagram telefrag fix by Zoid/Maddes  end
 		if (attacker.classname == "player")
 		{
 			if (targ == attacker)

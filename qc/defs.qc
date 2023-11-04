@@ -218,6 +218,7 @@ void		end_sys_fields;			// flag for structure dumping
 ==============================================================================
 */
 
+string version = "\nprogs_dump devkit\nversion 3.0.0"; // inspired by Copper
 
 //
 // constants
@@ -244,6 +245,8 @@ float	FL_ONGROUND				= 512;	// standing on something
 float	FL_PARTIALGROUND		= 1024;	// not all corners are valid
 float	FL_WATERJUMP			= 2048;	// player jumping out of water
 float	FL_JUMPRELEASED			= 4096;	// for jump debouncing
+
+float 	FL_NOCENTERPRINT		= 65536;// don't centerprint entity's message field when its targets are used
 
 // edict.movetype values
 float	MOVETYPE_NONE			= 0;	// never moves
@@ -439,6 +442,7 @@ float	known_release;	// unique id for a release; see values above -- iw
 .string		wad;
 .string 	map;
 .float		worldtype;	// 0=medieval 1=metal 2=base
+.float		skip_id1_overrides;
 
 //================================================
 
@@ -475,6 +479,7 @@ float	AS_STRAIGHT		= 1;
 float	AS_SLIDING		= 2;
 float	AS_MELEE		= 3;
 float	AS_MISSILE		= 4;
+float	AS_TURRET		= 5;
 
 //
 // player only fields
@@ -514,6 +519,8 @@ float	AS_MISSILE		= 4;
 
 .vector		oldorigin;		// only used by secret door
 
+.string		origmodel; // addition by bmFbr for switchable brushes
+
 .float		t_length, t_width;
 
 
@@ -531,7 +538,11 @@ float	AS_MISSILE		= 4;
 //
 .float 		pausetime;
 .entity 	movetarget;
-
+.float		homing;
+.float		projexpl;
+.float		proj_speed_mod;
+.float		proj_basespeed;
+.float		infight_mode;
 
 //
 // doors
@@ -589,6 +600,14 @@ float	AS_MISSILE		= 4;
 .string killtarget2;	// second target to kill
 string lastnameused;	// the targetname that was last used to trigger somthing
 
+
+//
+// switchable shadow
+//
+.float		switchshadstyle;
+.float		shadowoff;
+.entity shadowcontroller;
+.float speed2;
 
 //===========================================================================
 
@@ -692,8 +711,6 @@ void(string s) changelevel = #70;
 
 void(string var, string val) cvar_set = #72;	// sets cvar.value
 
-void(entity client, string s) centerprint = #73;	// sprint, but in middle
-
 // The following function definitions allow the engine's builtin
 // centerprint function (builtin #73) to be called with different
 // numbers of string arguments.  The string that will be printed is the
@@ -709,12 +726,41 @@ void(entity client, string s) centerprint = #73;	// sprint, but in middle
 // 256-char buffer, therefore excessively long messages should be
 // avoided.  -- iw
 //
-void(entity client, string s1, string s2) centerprint2 = #73;
-void(entity client, string s1, string s2, string s3) centerprint3 = #73;
-void(entity client, string s1, string s2, string s3, string s4) centerprint4 = #73;
-void(entity client, string s1, string s2, string s3, string s4, string s5) centerprint5 = #73;
-void(entity client, string s1, string s2, string s3, string s4, string s5, string s6) centerprint6 = #73;
-void(entity client, string s1, string s2, string s3, string s4, string s5, string s6, string s7) centerprint7 = #73;
+
+.float suppressCenterPrint;
+
+void(entity client, string s1) centerprint_builtin = #73;
+void(entity client, string s1, string s2) centerprint_builtin2 = #73;
+void(entity client, string s1, string s2, string s3) centerprint_builtin3 = #73;
+void(entity client, string s1, string s2, string s3, string s4) centerprint_builtin4 = #73;
+void(entity client, string s1, string s2, string s3, string s4, string s5) centerprint_builtin5 = #73;
+void(entity client, string s1, string s2, string s3, string s4, string s5, string s6) centerprint_builtin6 = #73;
+void(entity client, string s1, string s2, string s3, string s4, string s5, string s6, string s7) centerprint_builtin7 = #73;
+
+void(entity client, string s1) centerprint = {
+	// Is the centerprint message being used by something else?
+	if (!client.suppressCenterPrint)
+		centerprint_builtin(client, s1);
+	else {
+		// Send message to client console instead
+		sprint(client, "(centerprint) ");
+		sprint(client, s1);
+		sprint(client, "\n");
+	}
+}
+
+void(entity client, string s1, string s2) centerprint2 = {
+	// Is the centerprint message being used by something else?
+	if (!client.suppressCenterPrint)
+		centerprint_builtin2(client, s1, s2);
+	else {
+		// Send message to client console instead
+		sprint(client, "(centerprint) ");
+		sprint(client, s1);
+		sprint(client, s2);
+		sprint(client, "\n");
+	}
+}
 
 void(vector pos, string samp, float vol, float atten) ambientsound = #74;
 
@@ -844,6 +890,11 @@ nosave float *world_sounds;  //via Spike fun times! nosave=noclobber
 void() trigger_changemusic; // dumptruck_ds
 void() onlookat_touch; // dumptruck_ds
 
+string(float num) lightstyle_fade_lookup; //addition by bmFbr for switchable shadows
+void() misc_shadowcontroller;
+void() misc_shadowcontroller_use;
+void() shadow_fade_in;
+void() shadow_fade_out;
 
 // Drake Cutscenes -- Borrowed from Zerstorer.
 .string     script;         //dhm - denotes which script to read.
@@ -894,10 +945,116 @@ float HEAL_MONSTER_ONLY	= 4;
 .string mdl_head;
 .string mdl_body;
 .string mdl_proj;
+.string mdl_exproj;
 .float skin_head;
 .float skin_proj;
+.float skin_exproj;
 .string mdl_gib1;
 .string mdl_gib2;
 .string mdl_gib3;
 
+.vector mdlsz, centeroffset; // addition by bmFbr for custom model bounding box definition
+
 // Custom Model End -- dumptruck_ds
+
+.float shardvalue; // ammo shard value
+
+.float drop_item; // key DropStuff
+
+
+float SPAWN_SILENTLY = 2097152;
+float TRIGGER_CENTERPRINTALL = 1048576;
+
+// entity state
+.float estate;
+.void() dormant_use;
+float STATE_ACTIVE      = 0;
+float STATE_INACTIVE    = 1;
+float STATE_INVISIBLE = 8;
+
+.float prevstate;
+
+//
+// fog
+//
+.vector		fog_color, fog_color2;
+.float		fog_density, fog_density2;
+.float 		skyfog_density, skyfog_density2;
+.entity 	fogblend_entity;
+.float 		distance;
+
+void( entity client, float density, vector color ) fog_save;
+void( entity client, float density) skyfog_save;
+void( entity client, entity fogger ) fog_setFromEnt;
+void( entity client, float density, vector color ) fog_set;
+void( entity client, float density) skyfog_set;
+
+nosave float cleanUpClientStuff;
+nosave float gamestarted;
+
+
+.string	include;
+.string type;
+
+.float last_setstate_frame = light_lev;
+.entity last_setstate = aiment;
+// 1998-07-03 hurt_touch fix by Robert Field  start
+//
+// triggers.qc
+//
+.float hurt_together_time;
+.float hurt_nextthink;
+// 1998-07-03 hurt_touch fix by Robert Field  end
+float I_AM_TURRET = 262144; //dumptruck_ds
+.void() th_turret;
+
+
+.entity animcontroller;
+.entity rotatecontroller;
+.float multiplier;
+
+.float 		first_frame, last_frame;
+.float 		first_frame2, last_frame2;
+.float 		frtime, frtime2;
+.float 		animtype, animtype2;
+.vector		cmins, cmaxs;
+.vector 	cust_avelocity;
+.float touch_time;
+
+// cshift controller
+
+.entity csfcontroller;
+
+.vector csf_color;
+.float csf_density;
+
+void(entity client) csf_apply;
+void(entity client, float density, vector color, float spd) csf_fade;
+void(entity client, float density, vector color) csf_set;
+
+.float fade_amt;
+
+// worldspawn default mdls
+.string h_vial_mdl;
+.string h_25_mdl;
+.string h_15_mdl;
+.string h_mega_mdl;
+
+.string s_sm_mdl;
+.string s_lg_mdl;
+
+.string n_sm_mdl;
+.string n_lg_mdl;
+
+.string r_sm_mdl;
+.string r_lg_mdl;
+
+.string c_sm_mdl;
+.string c_lg_mdl;
+
+.string a_shr_mdl;
+.string a_grn_mdl;
+.string a_ylw_mdl;
+.string a_red_mdl;
+
+.entity infight_activator;

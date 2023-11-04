@@ -3,6 +3,7 @@
 float 	BREAKABLE_NO_MONSTERS = 1;
 float		BREAK_EXPLODE = 2;
 float		BREAK_CUSTOM = 4;
+float		START_OFF = 1;
 float		SPARKS_BLUE = 2;
 float		SPARKS_PALE = 4;
 
@@ -40,7 +41,8 @@ void () func_explobox_die =
 	self.think = func_explobox_explode;
 };
 
-/*QUAKED func_explobox (0 .5 .8) ? START_OFF
+/*QUAKED func_explobox (0 .5 .8) ? START_OFF X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 An exploding brush entity.  Works just like misc_explobox.
 
 Keys:
@@ -352,11 +354,13 @@ void () func_breakable_die = {
 	} else {
 		self.origin = ((self.absmin + self.absmax) * 0.5);
 		setorigin (self, self.origin);
-
+		DropStuff();
 		if (self.spawnflags & BREAK_CUSTOM) {
+			if (self.switchshadstyle) lightstyle(self.switchshadstyle, "m");
 			make_breakable_templates_debris ();
 			remove (self);
 		} else {
+			if (self.switchshadstyle) lightstyle(self.switchshadstyle, "m");
 			make_breakable_debris ();
 			remove (self);
 		}
@@ -377,20 +381,69 @@ void () func_breakable_use =
 	func_breakable_die ();
 };
 
-/*QUAKED func_breakable (0 .5 .8) ? NO_MONSTERS
-A visible object that can be destroyed by shooting it. If it has a targetname, it will not be directly damageable.
+/*QUAKED func_breakable (0 .5 .8) ? NO_MONSTERS X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
 
-BREAKABLE_NO_MONSTERS: object ignores damage from monsters
+"Breakable - See manual for full details
 
-"health" Default 20
+Defaults to built-in .mdl file with 32 styles, cnt is number of pieces of debris to spawn (built-in only)
+Or use spawnflag 4 and break_template1-4 to set path of custom .mdl or .bsp models.
+brk_object_count1-4 sets the number of pieces of each break_template when using custom .mdl or bsp models.
+If noise1 is not set it will default to various sounds in sounds/break folder
+Use spawnflag 2 for an explosion, dmg is amount of damage inflicted"
 
-"cnt" number of pieces of debris to spawn. default 5. (was 6 -- dumptruck_ds)
+spawnflags(flags)
+1 : "No Monster Damage" : 0 : "Only the player can break"
+2 : "Explosion" : 0 : "Produces explosion effect and sound"
+4 : "Use custom mdls or bsp models" : 0 : "Uses models specified in break_template1, 2, etc"
 
-"style" The style of the debris:
-0 = green metal (default)
-1 = red metal
-2 = concrete
-3 - 24 additional skins
+style(choices) : "Built-in debris style" : 0
+0 : "Green Metal (default)"
+1 : "Red Metal"
+2 : "Concrete"
+3 : "Pine wood"
+4 : "Brown wood"
+5 : "Red wood"
+6 : "Stained Glass Yellow Flames"
+7 : "Stained Glass Red Rays"
+8 : "Stained Glass Yellow Dragon"
+9 : "Stained Glass Blue Dragon"
+10 : "Stained Glass Red Dragon"
+11 : "Light Copper"
+12 : "Dark Copper"
+13 : "Tan Bricks Large"
+14 : "Brown Bricks Large"
+15 : "Green Bricks Large"
+16 : "Generic Light Brown"
+17 : "Red Brown Computer"
+18 : "Grey Black Computer"
+19 : "Blue Green Metal"
+20 : "Blue Green Runic Wall"
+21 : "Brown Metal"
+22 : "Dark Brown Metal"
+23 : "Medium Brown Metal"
+24 : "Blue Metal"
+25 : "Green Stonework"
+26 : "Blue Stonework"
+27 : "Brown Bricks"
+28 : "Tan Blue Bricks"
+29 : "Red Bricks"
+30 : "Blue Bricks"
+31 : "Metal Rivets"
+
+noise1(string) : "Break noise (overrides default sounds)"
+cnt(integer) : "Number of pieces of debris to spawn" : 5
+health(integer) : "Health of breakable" : 20
+dmg(integer) : "Amount of Explosive Damage" : 20
+break_template1(string) : "Template 1 model path, e.g. maps/break/brk.bsp or progs/brick.mdl"
+break_template2(string) : "Template 2 model path, e.g. maps/break/brk.bsp or progs/brick.mdl"
+break_template3(string) : "Template 3 model path, e.g. maps/break/brk.bsp or progs/brick.mdl"
+break_template4(string) : "Template 4 model path, e.g. maps/break/brk.bsp or progs/brick.mdl"
+break_template5(string) : "Template 5 model path, e.g. maps/break/brk.bsp or progs/brick.mdl"
+brk_obj_count1(integer) : "Template 1 spawn count"
+brk_obj_count2(integer) : "Template 2 spawn count"
+brk_obj_count3(integer) : "Template 3 spawn count"
+brk_obj_count4(integer) : "Template 4 spawn count"
+brk_obj_count5(integer) : "Template 5 spawn count"
 */
 
 void() break_template_setup = {
@@ -421,39 +474,47 @@ void () func_breakable = {
 		|| self.style == 24 || self.style == 31)
 		if !(self.noise1)
 	{
-		precache_sound("break/pd_metal2.wav");
-		self.noise1 = "break/pd_metal2.wav";
+		precache_sound("break/metal2.wav");
+		self.noise1 = "break/metal2.wav";
 	}
 	if (self.style == 3 || self.style == 4 || self.style == 5)
 		if !(self.noise1)
 	{
-		precache_sound("break/pd_wood1.wav");
-		precache_sound("break/pd_wood2.wav");
+		precache_sound("break/wood1.wav");
+		precache_sound("break/wood2.wav");
 		if (random() > 0.6) // wood only randomized
-		self.noise1 = "break/pd_wood1.wav";
+		self.noise1 = "break/wood1.wav";
 		else
-		self.noise1 = "break/pd_wood2.wav";
+		self.noise1 = "break/wood2.wav";
 	}
 	// glass sounds -- this is more of a shattering sound anyway
 	if (self.style == 6 || self.style == 7 || self.style == 8 || self.style == 9 || self.style == 10)
 		if !(self.noise1)
 	{
-		precache_sound("break/pd_metal1.wav");
-		self.noise1 = "break/pd_metal1.wav";
+		precache_sound("break/metal1.wav");
+		self.noise1 = "break/metal1.wav";
 	}
 	if (self.style == 1 || self.style == 2 || self.style == 13 || self.style == 14
 		|| self.style == 15 || self.style == 16 || self.style == 20 || self.style == 21
 		|| self.style == 22 || self.style == 23)
 		if !(self.noise1)
 	{
-		precache_sound("break/pd_bricks1.wav");
-		self.noise1 = "break/pd_bricks1.wav";
+		precache_sound("break/stones1.wav");
+		precache_sound("break/bricks1.wav");
+		if (random() > 0.6) // wood only randomized
+		self.noise1 = "break/bricks1.wav";
+		else
+		self.noise1 = "break/stones1.wav";
 	}
 	if (self.style == 25 || self.style == 26 || self.style == 27 || self.style == 28 || self.style == 29 || self.style == 30)
 		if !(self.noise1)
 	{
-		precache_sound("break/pd_stones1.wav");
-		self.noise1 = "break/pd_stones1.wav";
+		precache_sound("break/stones1.wav");
+		precache_sound("break/bricks1.wav");
+		if (random() > 0.6) // wood only randomized
+		self.noise1 = "break/stones1.wav";
+		else
+		self.noise1 = "break/bricks1.wav";
 	}
 	// else
 	// 	(self.noise1 = "blob/hit1.wav");
@@ -473,6 +534,7 @@ void () func_breakable = {
 		self.th_die = func_breakable_killed;
 	}
 
+	if (self.switchshadstyle) lightstyle(self.switchshadstyle, "a");
 };
 
 /*
@@ -502,7 +564,7 @@ void() ladder_touch =
 	other.onladder = 1;
 }
 
-/*QUAKED trigger_ladder (.5 .5 .5) ?
+/*QUAKED trigger_ladder (.5 .5 .5) ? X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
 invisible ladder entity. when player is touching this entity, he can climb by pushing 'jump'
 
 Keys:
@@ -526,6 +588,8 @@ void() trigger_ladder =
 
 	InitTrigger ();
 	self.touch = ladder_touch;
+
+	SUB_CheckWaiting();
 };
 /*
 ===============================================================================
@@ -598,8 +662,9 @@ void () func_laser_use =
 	}
 };
 
-/*QUAKED func_laser (0 .5 .8) ? START_OFF LASER_SOLID
-A togglable laser, hurts to touch, can be used to block players
+/*QUAKED func_laser (0 .5 .8) ? START_OFF LASER_SOLID X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
+A toggleable laser, hurts to touch, can be used to block players
 
 START_OFF: Laser starts off.
 
@@ -749,7 +814,14 @@ void() make_sparks =
 			i = i + 1;
 		}
 		if (self.sounds == 1)
-			sound (self, CHAN_AUTO, "dump/spark.wav", 1, ATTN_STATIC);
+			{
+				if (self.noise != "")
+					{
+					sound (self, CHAN_AUTO, self.noise, 1, ATTN_STATIC);
+					}
+				else
+					sound (self, CHAN_AUTO, "enforcer/enfstop.wav", 1, ATTN_STATIC);
+			}
 		SUB_UseTargets();
 		self.nextthink = time + 0.1 + random() * 0.1;
 		self.think = spark_turnofflight;
@@ -758,7 +830,8 @@ void() make_sparks =
 
 };
 
-/*QUAKED misc_sparks (0 .5 .8) (-8 -8 -8) (8 8 8) START_OFF SPARKS_BLUE SPARKS_PALE
+/*QUAKED misc_sparks (0 .5 .8) (-8 -8 -8) (8 8 8) START_OFF SPARKS_BLUE SPARKS_PALE X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Produces a burst of yellow sparks at random intervals. If targeted, it will toggle between on or off.  If it targets a light, that light will flash allong with each burst of sparks. Note: targeted lights should be set to START_OFF.
 
 SPARKS_BLUE: sparks are blue in color
@@ -781,7 +854,10 @@ void() misc_sparks =
 		return;
 
 	precache_model ("progs/spark.mdl");
+	if (!self.noise)
 	precache_sound ("dump/spark.wav");
+	else
+	precache_sound (self.noise);
 
 	if (!self.movedir)
 		self.movedir = '0 0 -30';
@@ -834,7 +910,8 @@ void() splash_think =
 // renamed from misc_splash (Rubcion 2)  --dumptruck_ds
 //
 
-/*QUAKED misc_particles (0 .5 .8) (-8 -8 -8) (8 8 8) START_OFF
+/*QUAKED misc_particles (0 .5 .8) (-8 -8 -8) (8 8 8) START_OFF X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Produces a continuous particle splash for waterfalls and other effects
 
 "color" color of particles.  0 through 15, corresponds to a row of the quake palette. (default 0)
@@ -872,7 +949,7 @@ void() misc_particles =
 //this is from Custents not Rubicon2  -- dumptruck_ds
 //renamed from func to misc
 
-/*QUAKED misc_particlespray (0 .5 .8) (-8 -8 -8) (8 8 8)
+/*QUAKED misc_particlespray (0 .5 .8) (-8 -8 -8) (8 8 8) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
 Shoots particles either when triggered, or contiuously when not triggered by anything.
 "color" is the palette color of the particles
 
@@ -884,7 +961,8 @@ Shoots particles either when triggered, or contiuously when not triggered by any
 
 "movedir" is the vector distance that the particles will travel before disappearing. (in x y z)
 
-"duration" is the amount of time that the it will continue to release particles so that it can release a long stream of particles with only one triggering.*/
+"duration" is the amount of time that the it will continue to release particles so that it can release a long stream of particles with only one triggering.
+*/
 
 .float	endtime;
 .float	duration;

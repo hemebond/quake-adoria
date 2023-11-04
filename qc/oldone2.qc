@@ -121,7 +121,7 @@ void(vector p) shub_missile =
 	puff.think = s_explode1;
 	puff.nextthink = time;
 
-	launch_spike (org, vec); // lavaball in your face!
+	launch_spike2 (org, vec, 300); // lavaball in your face!
 	if (self.mdl_proj != "") // dumptruck_ds custom_mdls
 	{
 			setmodel (newmis, self.mdl_proj);
@@ -143,7 +143,6 @@ void(vector p) shub_missile =
 	// setmodel (newmis, "progs/lavaball.mdl");
 	newmis.avelocity = '200 100 300';
 	setsize (newmis, VEC_ORIGIN, VEC_ORIGIN);
-	newmis.velocity = vec*300;
 	newmis.touch = T_MissileTouch; // rocket explosion
 	sound_attack (self, CHAN_WEAPON, "boss1/throw.wav", 1, ATTN_NORM);
 
@@ -240,6 +239,10 @@ void(entity attacker, float damage) oldone2_pain =
 
 void() oldone2_die =
 {
+// 1998-07-30 Shub kill count fix by Maddes  start
+	//killed_monsters = killed_monsters + 1;
+	//WriteByte (MSG_ALL, SVC_KILLEDMONSTER);	// Already done by FL_MONSTER
+// 1998-07-30 Shub kill count fix by Maddes  end
 	// throw tons of meat chunks
 	local	vector	oldo;
 	local	float	x, y, z;
@@ -311,6 +314,9 @@ void() monster_oldone2 =
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
 		return;
 
+	if (self.spawnflags & I_AM_TURRET)
+		objerror("Incompatible spawnflag: TURRET_MODE\n");
+
 	if (deathmatch)
 	{
 		remove(self);
@@ -355,6 +361,7 @@ void() monster_oldone2 =
 	self.th_run = old2_attk1;
 	self.th_pain = oldone2_pain;
 	self.th_die = old2_twitch1;
+	self.touch = monster_touch;	// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten
 
 	total_monsters = total_monsters + 1;
 };

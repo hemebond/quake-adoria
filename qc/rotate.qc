@@ -90,7 +90,7 @@ vector (vector ang) SUB_NormalizeAngles =
    return ang;
 };
 
-/*QUAKED info_rotate (0 0.5 0) (-4 -4 -4) (4 4 4)
+/*QUAKED info_rotate (0 0.5 0) (-4 -4 -4) (4 4 4) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
 Used as the point of rotation for rotatable objects.
 */
 void() info_rotate =
@@ -369,7 +369,8 @@ void() rotate_entity_firstthink =
    self.use = rotate_entity_use;
    };
 
-/*QUAKED func_rotate_entity (0 .5 .8) (-8 -8 -8) (8 8 8) TOGGLE START_ON
+/*QUAKED func_rotate_entity (0 .5 .8) (-8 -8 -8) (8 8 8) TOGGLE START_ON X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Creates an entity that continually rotates.  Can be toggled on and
 off if targeted.
 
@@ -757,7 +758,8 @@ void() rotate_train_find =
    self.dest1 = self.origin; // original position
    };
 
-/*QUAKED func_rotate_train (0 .5 .8) (-8 -8 -8) (8 8 8)
+/*QUAKED func_rotate_train (0 .5 .8) (-8 -8 -8) (8 8 8) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 In path_rotate, set speed to be the new speed of the train after it reaches
 the path change.  If speed is -1, the train will warp directly to the next
 path change after the specified wait time.  If MOVETIME is set on the
@@ -915,7 +917,8 @@ void() movewall_think =
    self.nextthink = time + 0.02;
    };
 
-/*QUAKED func_movewall (0 .5 .8) ? VISIBLE TOUCH NONBLOCKING
+/*QUAKED func_movewall (0 .5 .8) ? VISIBLE TOUCH NONBLOCKING X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Used to emulate collision on rotating objects.
 
 VISIBLE causes brush to be displayed.
@@ -956,7 +959,7 @@ void() func_movewall =
    self.ltime = time;
    };
 
-/*QUAKED rotate_object (0 .5 .8) ?
+/*QUAKED rotate_object (0 .5 .8) ? X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
 This defines an object to be rotated.  Used as the target of func_rotate_door.
 */
 void() rotate_object =
@@ -1121,7 +1124,8 @@ void() rotate_door_use =
    };
 
 
-/*QUAKED func_rotate_door (0 .5 .8) (-8 -8 -8) (8 8 8) STAYOPEN
+/*QUAKED func_rotate_door (0 .5 .8) (-8 -8 -8) (8 8 8) STAYOPEN X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Creates a door that rotates between two positions around a point of
 rotation each time it's triggered.
 
@@ -1166,42 +1170,47 @@ void() func_rotate_door = // added slinet option - sounds 4 -- dumptruck_ds
       self.dmg = 0;
       }
 
-   if (self.sounds == 0)
-      self.sounds = 1;
-	if (self.sounds == 1)
-	{
-		precache_sound ("doors/latch2.wav");
-		precache_sound ("doors/winch2.wav");
-		precache_sound ("doors/drclos4.wav");
-		self.noise1 = "doors/latch2.wav";
-		self.noise2 = "doors/winch2.wav";
-		self.noise3 = "doors/drclos4.wav";
-	}
-	if (self.sounds == 2)
-	{
-		precache_sound ("doors/airdoor1.wav");
-		precache_sound ("doors/airdoor2.wav");
-		self.noise2 = "doors/airdoor1.wav";
-		self.noise1 = "doors/airdoor2.wav";
-		self.noise3 = "doors/airdoor2.wav";
-	}
-	if (self.sounds == 3)
-	{
-		precache_sound ("doors/basesec1.wav");
-		precache_sound ("doors/basesec2.wav");
-		self.noise2 = "doors/basesec1.wav";
-		self.noise1 = "doors/basesec2.wav";
-		self.noise3 = "doors/basesec2.wav";
-	}
-  if (self.sounds == 4)
+  if (self.sounds == 0)
   {
-    precache_sound ("misc/null.wav");
-    precache_sound ("misc/null.wav");
-    self.noise2 = "misc/null.wav";
-    self.noise1 = "misc/null.wav";
-    self.noise3 = "misc/null.wav";
+      //If at least one custom sound is defined, then let's ignore the presets and go for the custom sounds,
+      //otherwise let's use preset #1 by default
+    if(self.noise1=="" && self.noise2=="" && self.noise3=="")
+    {
+        self.sounds = 1;
+    }
+    else
+    {
+        if(self.noise1=="") self.noise1 = "misc/null.wav";
+        if(self.noise2=="") self.noise2 = "misc/null.wav";
+        if(self.noise3=="") self.noise3 = "misc/null.wav";
+    }
   }
-
+  if (self.sounds == 1)
+  {
+      self.noise1 = "doors/latch2.wav";
+      self.noise2 = "doors/winch2.wav";
+      self.noise3 = "doors/drclos4.wav";
+  }
+  else if (self.sounds == 2)
+  {
+      self.noise2 = "doors/airdoor1.wav";
+      self.noise1 = "doors/airdoor2.wav";
+      self.noise3 = self.noise1;
+  }
+  else if (self.sounds == 3)
+  {
+      self.noise2 = "doors/basesec1.wav";
+      self.noise1 = "doors/basesec2.wav";
+      self.noise3 = self.noise1;
+  }
+  else if (self.sounds == 4)
+  {
+      self.noise1 = self.noise2 = self.noise3 = "misc/null.wav";
+  }
+   precache_sound (self.noise1);
+   precache_sound (self.noise2);
+   precache_sound (self.noise3);
+   
    self.solid = SOLID_NOT;
    self.movetype = MOVETYPE_NONE;
    setmodel (self, self.model);

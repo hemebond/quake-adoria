@@ -72,6 +72,11 @@ void(entity missile, float mspeed, float accuracy) LaunchMissile =
 	missile.angles = '0 0 0';
 	missile.angles_y = vectoyaw(missile.velocity);
 
+	if (self.projexpl)
+	{
+		missile.touch = T_WizardMisTouch;
+	}
+
 // set missile duration
 	missile.nextthink = time + 5;
 	missile.think = SUB_Remove;
@@ -195,6 +200,8 @@ void() Wiz_FastFire =
 {
 	local vector		vec;
 	local vector		dst;
+	local entity oldself;
+	local float projspeed = self.owner.proj_speed_mod * 600;
 
 	if (self.owner.health > 0)
 	{
@@ -206,11 +213,25 @@ void() Wiz_FastFire =
 		vec = normalize(dst - self.origin);
 		// sound_attack (self, CHAN_WEAPON, "wizard/wattack.wav", 1, ATTN_NORM);
 		launch_spike (self.origin, vec);
-		newmis.velocity = vec*600;
+		SetSpeed(newmis, vec, projspeed);
 		newmis.owner = self.owner;
 		newmis.classname = "wizspike";
-		setmodel (newmis, "progs/w_spike.mdl");
+		if (self.owner.projexpl)
+		{
+			// dprint("spawning exploding wizard proj from fastfire\n");
+			newmis.touch = T_WizardMisTouch;
+		}
+		if (self.owner.homing)
+		{
+			oldself = self;
+			self = self.owner;
+			SetupHoming(newmis, projspeed);
+			self = oldself;
+		}
+		setmodel(newmis, self.owner.mdl_proj);
+		newmis.skin = self.owner.skin_proj;
 		setsize (newmis, VEC_ORIGIN, VEC_ORIGIN);
+
 	}
 
 	remove (self);
@@ -251,9 +272,9 @@ void() Wiz_idlesound =
 local float wr;
 	wr = random() * 5;
 
-	if (self.waitmin < time)
+	if (self.fly_sound < time)
 	{
-	 	self.waitmin = time + 2;
+	 	self.fly_sound = time + 2;
 	 	if (wr > 4.5)
 	 		sound_idle (self, CHAN_VOICE, "wizard/widle1.wav", 1,  ATTN_IDLE);
 	 	if (wr < 1.5)
@@ -381,12 +402,12 @@ void() wiz_die =
 		{
 			ThrowGib ("progs/gib2.mdl", self.health);
 		}
+		DropStuff();
 		return;
 	}
-
+	DropStuff();
 	wiz_death1 ();
 };
-
 
 void(entity attacker, float damage) Wiz_Pain =
 {
@@ -403,12 +424,75 @@ void() Wiz_Missile =
 	wiz_fast1();
 };
 
-/*QUAKED monster_wizard (1 0 0) (-16 -16 -24) (16 16 40) Ambush
+/*QUAKED monster_wizard (1 0 0) (-16 -16 -24) (16 16 40) AMBUSH X X TRIGGER_SPAWNED X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+	model ("progs/wizard.mdl");
+}
+Wizard a.k.a. Scrag.
+
+Default health = 80
+
+snd_death(string) : "Path to custom death sound"
+snd_pain(string) : "Path to custom pain sound"
+snd_sight(string) : "Path to custom sight sound"
+snd_attack(string) : "Path to custom attack sound"
+snd_idle(string) : "Path to custom idle sound"
+snd_misc(string) : "Path to custom sound (IDLE 2)"
+
+mdl_head(string) : "Path to custom head model"
+mdl_body(string) : "Path to custom body model"
+skin_head(float) : "Skin index of custom head model"
+mdl_gib1(string) : "Path to custom 1st gib model"
+mdl_gib2(string) : "Path to custom 2nd gib model"
+mdl_gib3(string) : "Path to custom 3rd gib model"
+
+effects(choices) : "Add a visual effect to an entity"
+0 : "None (Default)"
+1 : "Brightfield (yellow particles)"
+4 : "Bright light"
+8 : "Dim light"
+
+berserk(choices) "Skips certain pain animations similar to skill 3 (Makes a semi-nightmare monster!)"
+0 : "Off (Default)"
+1 : "Berserk (skip pain animations)"
+
+delay(float) : "Delay spawn in for this amount of time"
+
+wait(choices) : "Play an effect when trigger spawned?"
+0 : "Teleport Effects (Default)"
+1 : "Spawn Silently"
+
+spawn_angry(Choices)
+0 : "Only when trigger spawned, default behavior - not angry"
+1 : "Only when trigger spawned, set to 1 to spawn angry at player"
+
+infight_mode(Choices)
+0 : "Default behavior, only with different classnames"
+1 : "Infight with monsters with the same classname but a different mdl_body"
+2 : "Infight with monsters with the same classname and model but a different skin"
+3 : "Infight no matter what"
+
+projexpl(choices) : "Exploding projectiles"
+0 : "No explosions"
+1 : "All projectiles explode"
+
+health(integer) : "Set this to a custom health amount"
+pain_target(string) : "Fire this target when pain_threshold is reached"
+pain_threshold(integer) : "Fire pain_target when health drops below this amount"
+sight_trigger(integer) : "1 = Fire target upon seeing the player instead of death"
+skin(integer) : "Skin index (default 0) Use this when your custom model has more than one skin to select"
+obit_name(string) : "When used with obit_method, this will set part of the text for a custom obituary. e.g. a Super Soldier! Using the examples here, the obituary would read: Player was eviscerated by a Super Solider!"
+obit_method(string) : "When used with obit_name, will set part of the text for a custom obituary. e.g. eviscerated - If empty, defaults to killed."
+damage_mod(float) : "USE WITH CAUTION! Multiply all damage from this monster by this number (e.g. 4 = Quad damage)"
+
 */
 void() monster_wizard =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
 		return;
+
+	if (self.spawnflags & I_AM_TURRET)
+		objerror("Incompatible spawnflag: TURRET_MODE\n");
 
 	if (deathmatch)
 	{
@@ -416,12 +500,17 @@ void() monster_wizard =
 		return;
 	}
 
+	if (!self.mdl_proj)
+	{
+		self.mdl_proj = "progs/w_spike.mdl";
+	}
+
 	// dumptruck_ds custom_mdls
 	precache_body_model ("progs/wizard.mdl");
 	precache_head_model ("progs/h_wizard.mdl");
-	precache_model ("progs/w_spike.mdl");
+	precache_proj_model ("progs/w_spike.mdl");
 	////dumptruck_ds
-	precache_sound ("wizard/hit.wav");		// used by c code
+	precache_sound_hit ("wizard/hit.wav");		// used by c code
 	precache_sound_attack ("wizard/wattack.wav");
 	precache_sound_death ("wizard/wdeath.wav");
 	precache_sound_idle ("wizard/widle1.wav");
@@ -441,6 +530,11 @@ void() monster_wizard =
 
 	setsize (self, '-16 -16 -24', '16 16 40');
 
+	if (!self.proj_speed_mod)
+	{
+		self.proj_speed_mod = 1;
+	}
+
 	if (!self.health) //thanks RennyC -- dumptruck_ds
 	self.health = 80;
 
@@ -459,7 +553,10 @@ void() monster_wizard =
 
 /* Scenic Dead Monster Patch stuff here from DeadStuff mod -- dumptruck_ds */
 
-/*QUAKED monster_dead_wizard (0 0.5 0.8) (-16 -16 -24) (16 16 32)
+/*QUAKED monster_dead_wizard (0 0.5 0.8) (-16 -16 -24) (16 16 32) SOLID X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+	model ({"path":"progs/wizard.mdl","frame":53});
+}
 */
 void() monster_dead_wizard =
 {

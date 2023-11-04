@@ -6,7 +6,18 @@ void(entity bomb, entity attacker, float rad, entity ignore) T_RadiusDamage;
 void(vector org, vector vel, float damage) SpawnBlood;
 void() SuperDamageSound;
 void() create_mobot; //dumptruck_ds mobot.qc
+void(entity mis, float speed) SetupHoming;
 
+void(entity mis, vector dir, float speed) SetSpeed =
+{
+	if (cvar("sv_maxvelocity") > speed)
+	{
+		mis.velocity = dir * speed;
+	}
+	else {
+		mis.velocity = dir * cvar("sv_maxvelocity");
+	}
+};
 
 // called by worldspawn
 void() W_Precache =
@@ -121,6 +132,7 @@ void() W_Precache =
 
 	precache_model2 ("progs/hknight.mdl");
 	precache_model2 ("progs/k_spike.mdl");
+	precache_model2 ("progs/k_spike2.mdl");
 	precache_model2 ("progs/h_hellkn.mdl");
 	precache_model2 ("progs/hknight.mdl");
 	precache_model2 ("progs/h_hellkn.mdl");
@@ -517,7 +529,7 @@ void() T_MissileTouch =
 };
 //dumptruck_ds start -- from inside qc tut http://www.insideqc.com/qctut/lesson-32.shtml
 
-void() T_GruntMisTouch =
+void(float direct, float splash) T_MonsterMisTouch =
 {
 	local float	damg;
 
@@ -530,7 +542,7 @@ void() T_GruntMisTouch =
 		return;
 	}
 
-	damg = 30 + random()*2; //dumptruck_ds
+	damg = direct + random()*2; //dumptruck_ds
 
 	if (other.health)
 	{
@@ -541,7 +553,7 @@ void() T_GruntMisTouch =
 
 	// don't do radius damage to the other, because all the damage
 	// was done in the impact
-	T_RadiusDamage (self, self.owner, 40, other); //dumptruck_ds
+	T_RadiusDamage (self, self.owner, splash, other); //dumptruck_ds
 
 //	sound (self, CHAN_WEAPON, "weapons/r_exp3.wav", 1, ATTN_NORM);
 	self.origin = self.origin - 8*normalize(self.velocity);
@@ -555,6 +567,24 @@ void() T_GruntMisTouch =
 	BecomeExplosion ();
 };
 
+void() T_GruntMisTouch =
+{
+	T_MonsterMisTouch(30, 40);
+};
+
+ // less direct damage, more splash than grunt
+ // TODO: add damage modifier
+void() T_HellKnightMisTouch =
+{
+	T_MonsterMisTouch(20, 50);
+};
+
+// big damage. explody scrag should be beefy.
+// TODO: add damage modifier
+void() T_WizardMisTouch =
+{
+ T_MonsterMisTouch(50, 50);
+};
 //dumptruck_ds end
 
 /*
@@ -606,7 +636,7 @@ void() W_GruntRocket =
 
 	// self.currentammo = self.ammo_rockets = self.ammo_rockets - 1; dumptruck_ds
 
-	sound (self, CHAN_WEAPON, "weapons/sgun1.wav", 1, ATTN_NORM);
+	sound_attack (self, CHAN_WEAPON, "weapons/sgun1.wav", 1, ATTN_NORM);
 
 	self.punchangle_x = -2;
 
@@ -619,7 +649,7 @@ void() W_GruntRocket =
 // set missile speed  -- dumptruck_ds below
 
 	missile.velocity = normalize(self.enemy.origin - self.origin);
-  missile.velocity = missile.velocity * 900;
+  SetSpeed(missile, missile.velocity, 900*self.proj_speed_mod);
   missile.angles = vectoangles(missile.velocity);
   missile.touch = T_GruntMisTouch;
 
@@ -631,10 +661,34 @@ void() W_GruntRocket =
 	// missile.touch = T_MissileTouch;
 
 // set missile duration
-	missile.nextthink = time + 5;
-	missile.think = SUB_Remove;
+	if (self.homing > 0)
+	{
+		SetupHoming(missile, 900 * self.proj_speed_mod);
+	}
+	else {
+		missile.nextthink = time + 5;
+		missile.think = SUB_Remove;
+	}
+	if (self.mdl_proj != "") // dumptruck_ds
+	{
+			setmodel (missile, self.mdl_proj);
+		}
+		else
+		{
+			setmodel (missile, "progs/missile.mdl");
+	}
 
-	setmodel (missile, "progs/missile.mdl");
+	if (!missile.skin_proj) // dumptruck_ds
+	{
+			missile.skin = self.skin_proj;
+		}
+		else
+		{
+			missile.skin = 0;
+	}
+// dumptruck_ds - end
+
+	// setmodel (missile, "progs/missile.mdl");
 	setsize (missile, '0 0 0', '0 0 0');
 	makevectors (self.angles); //thanks Voidforce -- dumptruck_ds
 	setorigin (missile, self.origin + v_forward * 30 + v_right * 5 + '0 0 12');
@@ -913,8 +967,8 @@ launch_spike
 Used for both the player and the ogre
 ===============
 */
-void(vector org, vector dir) launch_spike =
-{
+
+void(vector org, vector dir, float speed) launch_spike2 = {
 	newmis = spawn ();
 	newmis.owner = self;
 	newmis.movetype = MOVETYPE_FLYMISSILE;
@@ -924,13 +978,23 @@ void(vector org, vector dir) launch_spike =
 
 	newmis.touch = spike_touch;
 	newmis.classname = "spike";
-	newmis.think = SUB_Remove;
-	newmis.nextthink = time + 6;
+	if (self.homing > 0)
+	{
+		SetupHoming(newmis, speed);
+	}
+	else
+	{
+		newmis.think = SUB_Remove;
+		newmis.nextthink = time + 6;
+	}
 	setmodel (newmis, "progs/spike.mdl");
 	setsize (newmis, VEC_ORIGIN, VEC_ORIGIN);
 	setorigin (newmis, org);
 
-	newmis.velocity = dir * 1000;
+	SetSpeed(newmis, dir, speed * (self.proj_speed_mod ? self.proj_speed_mod : 1));
+};
+void(vector org, vector dir) launch_spike = {
+	launch_spike2(org,dir,1000);
 };
 
 void() W_FireSuperSpikes =
@@ -971,7 +1035,8 @@ void(float ox) W_FireSpikes =
 	self.attack_finished = time + 0.2;
 	self.currentammo = self.ammo_nails = self.ammo_nails - 1;
 	dir = aim (self, 1000);
-	launch_spike (self.origin + '0 0 16' + v_right*ox, dir);
+	// launch_spike (self.origin + '0 0 16' + v_right*ox, dir);
+	launch_spike (self.origin + self.view_ofs + v_up * -8 + v_right*ox, dir); //seven Nailgun position fix - thanks to Greenwood -- dumptruck_ds
 
 	self.punchangle_x = -2;
 
@@ -1001,9 +1066,15 @@ void() spike_touch =
 	}
 	else
 	{
-		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
 
-		if (self.classname == "wizspike")
+		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
+		if (self.owner.snd_hit)
+		{
+				sound (self, CHAN_WEAPON, self.owner.snd_hit, 1, ATTN_STATIC); //dumptruck_ds
+				WriteByte(MSG_BROADCAST, TE_GUNSHOT);
+		}
+
+		else if (self.classname == "wizspike")
 			WriteByte (MSG_BROADCAST, TE_WIZSPIKE);
 		else if (self.classname == "knightspike")
 			WriteByte (MSG_BROADCAST, TE_KNIGHTSPIKE);
@@ -1040,8 +1111,17 @@ void() superspike_touch =
 	}
 	else
 	{
-		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-		WriteByte (MSG_BROADCAST, TE_SUPERSPIKE);
+		if (self.owner.snd_hit)
+		{
+			sound (self, CHAN_WEAPON, self.owner.snd_hit, 1, ATTN_STATIC); //dumptruck_ds
+			WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
+			WriteByte(MSG_BROADCAST, TE_GUNSHOT);
+		}
+		else
+		{
+			WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
+			WriteByte (MSG_BROADCAST, TE_SUPERSPIKE);
+		}
 		WriteCoord (MSG_BROADCAST, self.origin_x);
 		WriteCoord (MSG_BROADCAST, self.origin_y);
 		WriteCoord (MSG_BROADCAST, self.origin_z);
@@ -1370,7 +1450,10 @@ CheatCommand
 */
 void() CheatCommand =
 {
-	if (deathmatch || coop)
+// 1998-07-29 Cheats coop fix by Maddes  start
+//	if (deathmatch || coop)
+	if (deathmatch)
+// 1998-07-29 Cheats coop fix by Maddes  end
 		return;
 
 	self.ammo_rockets = 100;
@@ -1551,12 +1634,19 @@ Just for development
 */
 void() ServerflagsCommand =
 {
+// 1998-07-29 Cheats coop fix by Maddes  start
+	if (deathmatch)
+		return;
+// 1998-07-29 Cheats coop fix by Maddes  end
 	serverflags = serverflags * 2 + 1;
 };
 
 void() QuadCheat =
 {
-	if (deathmatch || coop)
+// 1998-07-29 Cheats coop fix by Maddes  start
+//	if (deathmatch || coop)
+	if (deathmatch)
+// 1998-07-29 Cheats coop fix by Maddes  end
 		return;
 	self.super_time = 1;
 	self.super_damage_finished = time + 30;
@@ -1586,9 +1676,14 @@ void() ImpulseCommands =
 
 	if (self.impulse == 255)
 		QuadCheat ();
-///dumptruck_ds mobot.qc
-	// if (self.impulse == 100)
-	// 	create_mobot();
+// dumptruck_ds version inspired by Copper
+	if (self.impulse == 100)
+	sprint(self, version);
+
+	// if (self.impulse == 101) // debugging armor shards -- dumptruck_ds
+	// dprint ("Armortype is");
+	// dprint (ftos(self.armortype));
+	// dprint ("\n");
 
 	self.impulse = 0;
 };
@@ -1605,6 +1700,7 @@ void() W_WeaponFrame =
 	if (time < self.attack_finished)
 		return;
 
+if (self.impulse)	// 1998-08-14 Constantly checking all impulses fix by Perged
 	ImpulseCommands ();
 
 // check for attack
@@ -1633,4 +1729,80 @@ void() SuperDamageSound =
 		}
 	}
 	return;
+};
+
+void() MissileHome =
+{
+	local vector	dir, vtemp;
+	vtemp = self.enemy.origin + '0 0 10';
+
+	if (self.enemy.health < 1)
+	{
+		remove(self);
+		return;
+	}
+	dir = normalize(vtemp - self.origin);
+	if (self.homing < 1 && self.homing > 0) // can't do better than 100% homing
+	{
+		/*
+		This finds a vector somewhere between the vector the projectile is currently
+		travelling on and the vector that it would normally snap to for homing
+
+		homing = .25 means it will go 25% to the new direction, but keep 75% of the
+		original vector, resulting in a wider turning range.
+		*/
+		dir = normalize((dir * self.homing) + normalize(self.velocity * (1 - self.homing)));
+	}
+	if (!self.avelocity)
+		self.angles = vectoangles(dir);
+	SetSpeed(self, dir, self.proj_basespeed);
+
+	if (self.homing > 0)
+	{
+		if (self.homing < 1 && self.attack_finished && self.attack_finished < time )
+		{
+			//dprint("incrementing homing | ");
+			//dprint("old: ");
+			//dprint(ftos(self.homing));
+			//dprint(" | new: ");
+			self.homing = self.homing + 0.005;
+			//dprint(ftos(self.homing));
+			//dprint("\n");
+		}
+		self.nextthink = time + 0.2;
+		self.think = MissileHome;
+	}
+};
+
+void(entity mis, float speed) SetupHoming =
+{
+	local	vector	dir;
+	local	float	dist, flytime, speedmod;
+	if (self.proj_speed_mod > 1)
+	{
+		speedmod = 1/self.proj_speed_mod;
+	}
+	else if (speed > 250)
+	{
+		speedmod = 1 / (speed / 250);
+	}
+	else
+	{
+		speedmod = 1;
+	}
+	dir = normalize((self.enemy.origin + '0 0 10') - self.origin);
+	dist = vlen (self.enemy.origin - self.origin);
+	flytime = dist * 0.002 * speedmod;
+	if (flytime < 0.1)
+		flytime = 0.1;
+
+	mis.enemy = self.enemy;
+	mis.proj_basespeed = speed;
+	mis.homing = self.homing;
+	mis.nextthink = flytime + time;
+	mis.think = MissileHome;
+	if (self.waitmin > 0)
+	{
+		mis.attack_finished = time + self.waitmin; // store time to start increasing
+	}
 };

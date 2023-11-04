@@ -26,6 +26,24 @@ void() SetMovedir =
 	self.angles = '0 0 0';
 };
 
+
+/*
+=============
+SUB_CallAsSelf
+
+wrap the self/oself shuffle for code cleanliness elsewhere
+===============
+*/
+void(void() fun, entity newself) SUB_CallAsSelf =
+{
+	local entity oself;
+	
+	oself = self;
+	self = newself;
+	fun();
+	self = oself;	
+}
+
 /*
 ================
 InitTrigger
@@ -68,7 +86,7 @@ self.origin traveling at speed
 */
 void(entity ent, vector tdest, float tspeed, void() func) SUB_CalcMoveEnt =
 {
-local entity	stemp;
+	local entity	stemp;
 	stemp = self;
 	self = ent;
 
@@ -78,11 +96,14 @@ local entity	stemp;
 
 void(vector tdest, float tspeed, void() func) SUB_CalcMove =
 {
-local vector	vdestdelta;
-local float		len, traveltime;
+	local vector	vdestdelta;
+	local float		len, traveltime, localtime;
 
 	if (!tspeed)
 		objerror("No speed is defined!");
+
+	if (self.movetype == MOVETYPE_PUSH) localtime = self.ltime;
+	else localtime = time;
 
 	self.think1 = func;
 	self.finaldest = tdest;
@@ -91,31 +112,31 @@ local float		len, traveltime;
 	if (tdest == self.origin)
 	{
 		self.velocity = '0 0 0';
-		self.nextthink = self.ltime + 0.1;
+		self.nextthink = localtime + 0.1;
 		return;
 	}
-
+		
 // set destdelta to the vector needed to move
 	vdestdelta = tdest - self.origin;
-
+	
 // calculate length of vector
 	len = vlen (vdestdelta);
-
+	
 // divide by speed to get time to reach dest
 	traveltime = len / tspeed;
 
 	if (traveltime < 0.1)
 	{
 		self.velocity = '0 0 0';
-		self.nextthink = self.ltime + 0.1;
+		self.nextthink = localtime + 0.1;
 		return;
 	}
-
+	
 // set nextthink to trigger a think when dest is reached
-	self.nextthink = self.ltime + traveltime;
+	self.nextthink = localtime + traveltime;
 
 // scale the destdelta vector by the time spent traveling to get velocity
-	self.velocity = vdestdelta * (1/traveltime);	// qcc won't take vec/float
+	self.velocity = vdestdelta * (1/traveltime);	// qcc won't take vec/float	
 };
 
 /*
@@ -131,7 +152,6 @@ void()  SUB_CalcMoveDone =
 	if (self.think1)
 		self.think1();
 };
-
 
 /*
 =============
@@ -192,6 +212,66 @@ void() SUB_CalcAngleMoveDone =
 	self.nextthink = -1;
 	if (self.think1)
 		self.think1();
+};
+
+/*
+=============
+SUB_CalcAngleMoveController
+
+Same as SUB_CalcAngleMove, but using a separate controller entity
+to not lose track of current think functions.
+
+===============
+*/
+void() SUB_CalcAngleMoveDoneController;
+
+void(vector destangle, float tspeed, void() func, entity controller) SUB_CalcAngleMoveController =
+{
+	local vector	destdelta;
+	local float		len, traveltime;
+
+	if (!tspeed)
+		objerror("No speed is defined!");
+		
+	// set destdelta to the vector needed to move
+
+	destdelta = normalizeAngles180(destangle - self.angles);
+	/*dprint3("destangle:   ", vtos(destangle), "\n");
+	dprint3("self.angles: ", vtos( self.angles), "\n");
+	dprint3("destdelta:   ", vtos(destdelta), "\n");
+	*/
+
+	// calculate length of vector
+	len = vlen (destdelta);
+	
+	// divide by speed to get time to reach dest
+	traveltime = len / tspeed;
+
+	// set nextthink to trigger a think when dest is reached
+	controller.nextthink = time + traveltime;
+
+	// scale the destdelta vector by the time spent traveling to get velocity
+	self.avelocity = destdelta * (1 / traveltime);
+	
+	// Makes sure controller.owner points to self so it can be referenced later in the think function
+	controller.owner = self;  
+	controller.think1 = func;
+	controller.finalangle = destangle;
+	controller.think = SUB_CalcAngleMoveDoneController;
+};
+
+/*
+============
+After rotating, set angle to exact final angle
+============
+*/
+void() SUB_CalcAngleMoveDoneController =
+{
+	self.owner.angles = self.finalangle;
+	self.owner.avelocity = '0 0 0';
+	self.nextthink = -1;
+	if (self.think1)
+		SUB_CallAsSelf(self.think1, self.owner);
 };
 
 
@@ -255,6 +335,7 @@ void() SUB_UseTargets =
 //	local entity t, stemp, otemp, act;
 	local entity t;
 
+	if (self.estate != STATE_ACTIVE) return;
 //
 // check for a delay
 //
@@ -280,11 +361,22 @@ void() SUB_UseTargets =
 //
 // print the message
 //
-	if (activator.classname == "player" && self.message != "")
-	{
-		centerprint (activator, self.message);
-		if (!self.noise)
-			sound (activator, CHAN_VOICE, "misc/talk.wav", 1, ATTN_NORM);
+	if (self.message != "" && !(self.flags & FL_NOCENTERPRINT)) {
+		if (self.spawnflags & TRIGGER_CENTERPRINTALL) {
+			t = find(world, classname, "player");
+			while (t) {
+				centerprint (t, self.message);
+				if (!self.noise)
+					sound (t, CHAN_VOICE, "misc/talk.wav", 1, ATTN_NORM);
+				t = find(t, classname, "player");
+			}
+		}
+		
+		else if (activator.classname == "player") {
+			centerprint (activator, self.message);
+			if (!self.noise)
+				sound (activator, CHAN_VOICE, "misc/talk.wav", 1, ATTN_NORM);
+		}	
 	}
 
 //
@@ -295,24 +387,28 @@ void() SUB_UseTargets =
 		t = find(world, targetname, self.killtarget);
 		while(t != world)
 		{
+			if(t.switchshadstyle) lightstyle(t.switchshadstyle, "m");
 			remove(t);
 			t = find(t, targetname, self.killtarget);
 		}
 		t = find(world, targetname2, self.killtarget);
 		while(t != world)
 		{
+			if(t.switchshadstyle) lightstyle(t.switchshadstyle, "m");
 			remove(t);
 			t = find(t, targetname2, self.killtarget);
 		}
 		t = find(world, targetname3, self.killtarget);
 		while(t != world)
 		{
+			if(t.switchshadstyle) lightstyle(t.switchshadstyle, "m");
 			remove(t);
 			t = find(t, targetname3, self.killtarget);
 		}
 		t = find(world, targetname4, self.killtarget);
 		while(t != world)
 		{
+			if(t.switchshadstyle) lightstyle(t.switchshadstyle, "m");
 			remove(t);
 			t = find(t, targetname4, self.killtarget);
 		}
@@ -326,24 +422,28 @@ void() SUB_UseTargets =
 		t = find(world, targetname, self.killtarget2);
 		while(t != world)
 		{
+			if(t.switchshadstyle) lightstyle(t.switchshadstyle, "m");
 			remove(t);
 			t = find(t, targetname, self.killtarget2);
 		}
 		t = find(world, targetname2, self.killtarget2);
 		while(t != world)
 		{
+			if(t.switchshadstyle) lightstyle(t.switchshadstyle, "m");
 			remove(t);
 			t = find(t, targetname2, self.killtarget2);
 		}
 		t = find(world, targetname3, self.killtarget2);
 		while(t != world)
 		{
+			if(t.switchshadstyle) lightstyle(t.switchshadstyle, "m");
 			remove(t);
 			t = find(t, targetname3, self.killtarget2);
 		}
 		t = find(world, targetname4, self.killtarget2);
 		while(t != world)
 		{
+			if(t.switchshadstyle) lightstyle(t.switchshadstyle, "m");
 			remove(t);
 			t = find(t, targetname4, self.killtarget2);
 		}
@@ -398,6 +498,21 @@ void(string matchstring) SUB_UseName =
 	SUB_UseSpecificTarget(matchstring, targetname4);
 };
 // ### end of Custents triggering code
+
+/*
+=============
+SUB_UseEntTargets
+===============
+*/
+void(entity t) SUB_UseEntTargets =
+{
+	if (t == world) return;
+	activator = self;
+	entity oself = self;
+	self = t;
+	SUB_UseTargets();
+	self = oself;
+}
 
 /*
 ================
@@ -592,6 +707,35 @@ float() CheckValidTouch =
 		return FALSE;
 	if (other.movetype == MOVETYPE_NOCLIP)
 		return FALSE;
+	if (self.estate != STATE_ACTIVE)
+		return FALSE;
 	return TRUE;
 }
 float(float a, float b) not = { return a - (a & b); } // fix not issue in client.qc - Copper -- dumptruck_ds
+
+void() SUB_EndWaiting = {
+	self.is_waiting = 0;
+	self.estate = STATE_ACTIVE;
+	if (self.use == SUB_EndWaiting) self.use = self.dormant_use;
+
+	// special case for teleports, makes it ignore the fact that it has a targetname when touched
+	if (self.classname == "trigger_teleport") {
+		self.is_waiting = -1;
+	}
+};
+
+void() SUB_CheckWaiting = {
+	if (self.is_waiting > 0) {
+		self.dormant_use = self.use;
+		self.use = SUB_EndWaiting;
+		self.estate = STATE_INACTIVE;
+
+		dprint("Spawned a waiting ");
+		dprint(self.classname);
+		dprint(" with targetname ");
+		dprint(self.targetname);
+		dprint(" and target ");
+		dprint(self.target);
+		dprint("\n");
+	}
+};

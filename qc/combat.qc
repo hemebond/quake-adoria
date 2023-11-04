@@ -105,6 +105,17 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 	local	entity	oldself;
 	local	float	save;
 	local	float	take;
+	local 	float	ignore_armor; //johnfitz
+	local 	string	death_type; //johnfitz
+
+	// don't try to damage the world. Not healthy - bmFbr
+	if (!targ)
+		return;
+
+	//johnfitz -- make sure targ.deathtype doesn't keep stale info after this function is done
+	death_type = targ.deathtype;
+	targ.deathtype = "";
+	//johnfitz
 
 	if (!targ.takedamage)
 		return;
@@ -124,12 +135,23 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 	if (attacker.super_damage_finished > time)
 		damage = damage * 4;
 
-// damage mod for monsters -- dumptruck_ds
+	// damage mod for monsters -- dumptruck_ds
 	if (attacker.damage_mod)
-		damage = damage * attacker.damage_mod;
+	damage = damage * attacker.damage_mod;
 
+	//don't deplete armor if drowning/burning, or protected by biosuit/pentagram/godmode (note: in ID1 pentagram/godmode doesn't actually protect your armor)
+	if (death_type == "burning" || death_type == "drowning" || targ.invincible_finished >= time || targ.flags & FL_GODMODE)
+		ignore_armor = TRUE;
+	else
+		ignore_armor = FALSE;
+//johnfitz
 // save damage based on the target's armor level
-
+	if (ignore_armor)  //johnfitz -- some damage doesn't deplete armor
+	{
+		save = 0;
+	}
+	else
+	{
 	save = ceil(targ.armortype*damage);
 	if (save >= targ.armorvalue)
 	{
@@ -137,7 +159,12 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 		targ.armortype = 0;	// lost all armor
 		targ.items = targ.items - (targ.items & (IT_ARMOR1 | IT_ARMOR2 | IT_ARMOR3));
 	}
-
+}
+// // 1998-08-12 Drowning doesn't hurt armor by Maddes/Athos  start
+// 	}
+// 	else
+// 		save = 0;
+// 	// 1998-08-12 Drowning doesn't hurt armor by Maddes/Athos  end
 	targ.armorvalue = targ.armorvalue - save;
 	take = ceil(damage-save);
 
@@ -173,8 +200,13 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 	}
 
 // team play damage avoidance
-	if ( (teamplay == 1) && (targ.team > 0)&&(targ.team == attacker.team) )
-		return;
+// 1998-07-29 Teamplay 1 fix by Maddes  start
+	if ( (teamplay == 1) && (targ.team > 0) && (targ.team == attacker.team)
+	&& (targ != attacker)
+	&& (attacker.classname == "player")
+	&& (inflictor.classname != "door") )	// because squishing a teammate is still possible
+// 1998-07-29 Teamplay 1 fix by Maddes  end
+						return;
 
 // do the damage
 	targ.health = targ.health - take;
@@ -205,8 +237,35 @@ void(entity targ, entity inflictor, entity attacker, float damage) T_Damage=
 	// get mad unless of the same class (except for soldiers)
 		if (self != attacker && attacker != self.enemy)
 		{
+			local float mode;
+			mode = 0;
+			// take highest mode so infighting happens consistently
+			if (self.infight_mode == -1 || self.infight_mode > mode)
+			{
+				mode = self.infight_mode;
+			}
+			if (mode != -1 && attacker.infight_mode > mode)
+			{
+				mode = attacker.infight_mode;
+			}
 			//soldiers of the same style will infight -- dumptruck_ds - thanks for c0burn and Shamblernaut for your help!
-			if ( (self.classname != attacker.classname) || ((self.classname == "monster_army") && (self.style == attacker.style)))
+			if (mode == -1)
+			{
+				if (attacker.classname == "player")
+				{
+					if (self.enemy.classname == "player")
+						self.oldenemy = self.enemy;
+					self.enemy = attacker;
+					FoundTarget ();
+				}
+			}
+			else if (
+				(self.classname != attacker.classname) ||
+			  ((self.classname == "monster_army") && (self.style == attacker.style)) ||
+				(mode > 0 && self.mdl_body != attacker.mdl_body) || // infight if different models
+				(mode > 1 && self.skin != attacker.skin) || // infight if different skin
+				(mode > 2) // always infight
+			)
 			{
 				if (self.enemy.classname == "player")
 					self.oldenemy = self.enemy;

@@ -53,7 +53,8 @@ void() keytrigger_touch =
 	keytrigger_use();
 };
 
-/*QUAKED trigger_usekey (0 .5 0) ? x x x USE_SILV_KEY USE_GOLD_KEY
+/*QUAKED trigger_usekey (0 .5 0) ? X X X USE_SILV_KEY USE_GOLD_KEY X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Variable sized single use trigger that requires a key to trigger targets.  Must be targeted at one or more entities.
 
 "cnt"     if 1, leave a used key in the player's inventory (0 default).
@@ -80,10 +81,22 @@ void() trigger_usekey =
 
 	keylock_init ();
 
-	if (self.spawnflags & USE_SILV_KEY) //dumptruck_ds
+	if (self.spawnflags & USE_SILV_KEY) {//dumptruck_ds
 		keylock_set_silver_key ();
-	if (self.spawnflags & USE_GOLD_KEY) //dumptruck_ds
+
+		if (self.keyname != "") {
+			self.netname = self.keyname;
+			self.keyname = "";
+		}
+	}
+	if (self.spawnflags & USE_GOLD_KEY) {//dumptruck_ds
 		keylock_set_gold_key ();
+		
+		if (self.keyname != "") {
+			self.netname = self.keyname;
+			self.keyname = "";
+		}
+	}
 
 // support for item_key_custom -- iw
 	if (self.keyname != "")
@@ -102,6 +115,7 @@ void() trigger_usekey =
 	self.touch = keytrigger_touch;
 
 	InitTrigger ();
+	SUB_CheckWaiting();
 };
 
 // void() remove_touch =
@@ -142,24 +156,20 @@ trigger_setgravity
 float DT_GRAVTOFF = 8;  // trigger will start off
 
 void() grav_toggle = //dumptruck_ds based on hipnotic blocker_use
-
 {
-if ( !self.state )
-	{
-		self.state = 1;
-	setorigin( self, self.origin - '8000 8000 8000');
-	}
-else
-	{
-		self.state = 0;
-	setorigin( self, self.origin + '8000 8000 8000');
-	}
+	if (self.estate != STATE_ACTIVE)
+		self.estate = STATE_ACTIVE;
+	else
+		self.estate = STATE_INACTIVE;
+
 };
 
 void() trigger_gravity_touch =
 {
   // from Copper -- dumptruck_ds
   // if (!CheckValidTouch()) return;
+
+	if (self.estate != STATE_ACTIVE) return;
 
 	local float grav;
 
@@ -183,8 +193,9 @@ void() trigger_gravity_touch =
 		other.gravity = grav;
 };
 
-/*QUAKED trigger_setgravity (.5 .5 .5) ?
+/*QUAKED trigger_setgravity (.5 .5 .5) ? X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
 set the gravity of a player
+
 "gravity" what to set the players gravity to
  - 0 (default) normal gravity
  - 1 no gravity
@@ -195,6 +206,15 @@ set the gravity of a player
  - 102 slightly higher gravity
  - ...
  - 1000 very high gravity
+
+ NOTE: the amount of gravity can only be changed by touching another
+ trigger_setgravity with a different setting. The gravity key defaults to 0
+ which is normal gravity. Lower numbers (e.g. 25) equal lower gravity. Setting
+ 100 is normal gravity. Numbers above 100 will make the player “heavier”, i.e.
+ harder to jump. If you want multiple trigger setgravity triggers in one room or
+ area, make sure the brushes are not touching each other. This can cause the
+ triggers not to work properly.
+
 */
 void() trigger_setgravity =
 {
@@ -202,19 +222,17 @@ void() trigger_setgravity =
 		return;
 
 	InitTrigger ();
+
 	self.use = grav_toggle; // dumptruck_ds
 	self.touch = trigger_gravity_touch;
+
 	if ( self.spawnflags & DT_GRAVTOFF ) //dumptruck_ds
-		 {
-		 self.state = 0;
-		 setorigin( self, self.origin + '8000 8000 8000' );
-		 }
-	else
-		{
-		 self.state = 1;
-	 }  //end dumptruck_ds
+		self.estate = STATE_INACTIVE;
+
 	if (!self.gravity)
 		self.gravity = -1;
 	else
-	      self.gravity = ((self.gravity - 1) / 100);
+	    self.gravity = ((self.gravity - 1) / 100);
+
+	SUB_CheckWaiting();
 };

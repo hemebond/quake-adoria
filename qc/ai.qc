@@ -4,6 +4,9 @@ void() knight_walk1;
 void() knight_bow6;
 void() knight_bow1;
 void(entity etemp, entity stemp, entity stemp, float dmg) T_Damage;
+float NO_SIGHT_SOUND = 32;
+float PASSIVE_UNTIL_ATTACKED = 64;
+float PASSIVE_ALWAYS = 128;
 /*
 
 .enemy
@@ -90,6 +93,9 @@ void() path_corner =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
 		return;
+
+	if (self.noise) precache_sound(self.noise);
+	if (self.noise2) precache_sound(self.noise2);
 
 	movetarget_f ();
 };
@@ -280,9 +286,13 @@ void() HuntTarget =
 
 void() SightSound =
 {
-local float	rsnd;
+	if !(self.spawnflags & PASSIVE_ALWAYS)
+
+	local float	rsnd;
 
 	if (self.classname == "monster_ogre")
+		sound_sight (self, CHAN_VOICE, "ogre/ogwake.wav", 1, ATTN_NORM);
+	else if (self.classname == "monster_ogre_marksman")
 		sound_sight (self, CHAN_VOICE, "ogre/ogwake.wav", 1, ATTN_NORM);
 	else if (self.classname == "monster_knight")
 		sound_sight (self, CHAN_VOICE, "knight/ksight.wav", 1, ATTN_NORM);
@@ -330,7 +340,10 @@ void() FoundTarget =
 
 	self.show_hostile = time + 1;		// wake up other monsters
 
-	SightSound ();
+	if !(self.spawnflags & NO_SIGHT_SOUND || self.spawnflags & PASSIVE_ALWAYS || self.spawnflags & PASSIVE_UNTIL_ATTACKED)
+	{
+		SightSound ();
+	}
 	HuntTarget ();
 
 	if (self.sight_trigger == 1) //thanks RennyC -- dumptruck_ds
@@ -380,6 +393,9 @@ float() FindTarget =
 		if (!client)
 			return FALSE;	// current check entity isn't in PVS
 	}
+
+	if ((self.spawnflags & PASSIVE_UNTIL_ATTACKED) || (self.spawnflags & PASSIVE_ALWAYS))
+		return FALSE;
 
 	if (client.flags & FL_NOTARGET || client.movetype == MOVETYPE_NOCLIP) // from Copper -- dumptruck_ds
 		return FALSE;
@@ -441,11 +457,13 @@ float() FindTarget =
 
 void(float dist) ai_forward =
 {
+	// dprint("ai_forward\n");
 	walkmove (self.angles_y, dist);
 };
 
 void(float dist) ai_back =
 {
+	// dprint("ai_back\n");
 	walkmove ( (self.angles_y+180), dist);
 };
 
@@ -459,6 +477,7 @@ stagger back a bit
 */
 void(float dist) ai_pain =
 {
+
 	ai_back (dist);
 /*
 	local float	away;
@@ -479,6 +498,7 @@ stagger back a bit
 */
 void(float dist) ai_painforward =
 {
+	// dprint("ai_painforward\n");
 	walkmove (self.ideal_yaw, dist);
 };
 
@@ -608,7 +628,7 @@ float() CheckAnyAttack =
 		return FALSE;
 	if (self.classname == "monster_army")
 		return SoldierCheckAttack ();
-	if (self.classname == "monster_ogre")
+	if ((self.classname == "monster_ogre") || (self.classname == "monster_ogre_marksman"))
 		return OgreCheckAttack ();
 	if (self.classname == "monster_shambler")
 		return ShamCheckAttack ();
@@ -652,11 +672,21 @@ Turn in place until within an angle to launch a missile attack
 void() ai_run_missile =
 {
 	self.ideal_yaw = enemy_yaw;
+	// dprint("ai_run_missile GO\n");
 	ChangeYaw ();
 	if (FacingIdeal())
 	{
-		self.th_missile ();
-		self.attack_state = AS_STRAIGHT;
+		if (self.spawnflags & I_AM_TURRET)
+			{
+				self.th_turret();
+				// dprint("th_turret...\n");
+			}
+		else
+			{
+				self.th_missile ();
+				// dprint("th_missile\n");
+			}
+			self.attack_state = AS_STRAIGHT;
 	}
 };
 
@@ -697,10 +727,10 @@ The monster has an enemy it is trying to kill
 */
 void(float dist) ai_run =
 {
-
+	// dprint("ai_run\n");
 	movedist = dist;
 // see if the enemy is dead
-	if (self.enemy.health <= 0)
+	if ((self.enemy.health <= 0) || (self.spawnflags & PASSIVE_ALWAYS))
 	{
 		self.enemy = world;
 	// FIXME: look all around for other targets
@@ -711,7 +741,11 @@ void(float dist) ai_run =
 		}
 		else
 		{
-			if (self.movetarget)
+			if (self.spawnflags & I_AM_TURRET)
+				{
+					self.th_stand ();
+				}
+			else if (self.movetarget)
 				self.th_walk ();
 			else
 				self.th_stand ();
@@ -737,12 +771,19 @@ void(float dist) ai_run =
 	enemy_range = range(self.enemy);
 	enemy_yaw = vectoyaw(self.enemy.origin - self.origin);
 
+	if (self.spawnflags & I_AM_TURRET)
+		{
+			ai_face ();
+		}
+
+	// if ((self.attack_state == AS_MISSILE) || !(self.spawnflags & I_AM_TURRET))
 	if (self.attack_state == AS_MISSILE)
 	{
-//dprint ("ai_run_missile\n");
+		// dprint ("ai_run_missile... from ai_run\n");
 		ai_run_missile ();
 		return;
 	}
+	// if ((self.attack_state == AS_MELEE) || !(self.spawnflags & I_AM_TURRET))
 	if (self.attack_state == AS_MELEE)
 	{
 //dprint ("ai_run_melee\n");
@@ -753,12 +794,67 @@ void(float dist) ai_run =
 	if (CheckAnyAttack ())
 		return;					// beginning an attack
 
+	// if ((self.attack_state == AS_SLIDING) || !(self.spawnflags & I_AM_TURRET))
 	if (self.attack_state == AS_SLIDING)
 	{
 		ai_run_slide ();
 		return;
 	}
+	// part of monster face from TheSolipsist
+	// urged to change positions
+  if (time < self.t_length) // if orientation is forced
+  {
+    ChangeYaw();
 
+    if (walkmove(self.ideal_yaw, dist))
+      return;
+
+    self.ideal_yaw += 30; // dodge left
+    ChangeYaw();
+
+    if (walkmove(self.ideal_yaw, dist))
+      return;
+
+    self.ideal_yaw -= 60; // dodge right
+    ChangeYaw();
+    ChangeYaw();
+
+    if (walkmove(self.ideal_yaw, dist))
+      return;
+
+    self.ideal_yaw += 30; // give up
+    ChangeYaw();
+    self.touch_time = self.touch_time - 0.1; // lose patience
+
+    return;
+  }
+
+if !(self.spawnflags & I_AM_TURRET) // keeps monster from moving to player - dumptruck_ds
 // head straight in
 	movetogoal (dist);		// done in C code...
 };
+/*
+=============
+visibleToOther
+
+returns 1 if the entity is visible to other, even if not infront ()
+=============
+*/
+float (entity targ) visibleToOther =
+{
+  local vector spot1, spot2;
+
+  spot1 = other.origin + other.view_ofs;
+  spot2 = targ.origin + targ.view_ofs;
+  traceline(spot1, spot2, TRUE, other); // see through other monsters
+
+  if (trace_inopen && trace_inwater)
+    return FALSE; // sight line crossed contents
+
+  if (trace_fraction == 1)
+    return TRUE;
+
+  return FALSE;
+};
+
+//----------------------------------------------------------------------------

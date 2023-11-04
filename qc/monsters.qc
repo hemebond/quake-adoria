@@ -54,9 +54,12 @@ self.think1();
 //override the random delay some go functions apply
 self.nextthink = time + 0.1;
 	{
-		if (self.wait == 0/* || self.classname == "monster_zombie"*/)  //dumptruck_ds: if wait value is >0 spawn silently, hack for zombies broke this, fixed with pos1!
-		spawn_tfog (self.origin);
-		spawn_tdeath(self.origin, self);
+		if !(self.spawnflags & SPAWN_SILENTLY)
+		{
+			if (self.wait == 0)  //dumptruck_ds: if wait value is > 0 spawn silently or use a spawnflag
+			spawn_tfog (self.origin);
+			spawn_tdeath(self.origin, self);
+		}
 	}
 
 }
@@ -64,6 +67,11 @@ self.nextthink = time + 0.1;
 void() monster_teleport_delay = //new from Qmaster func coding help thread
 {
 self.think = monster_teleport_go;
+	if (self.delay == -1)
+		{
+			self.nextthink = time + 0.1 + random(); //if delay is set to -1 random delay from 0.1 to 1 second - dumptruck_ds
+			return;	
+		}
 self.nextthink = time + 0.1 + self.delay;
 };
 
@@ -125,6 +133,30 @@ return TRUE;
 
 //end of Preach's new fields here
 
+// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten  start
+/*
+================
+by: Philip Martin aka: Kryten
+When on top of monsters or players you slide. This is a QuakeC problem.
+The function below fixes that problem.
+based on code given to Kryten by: Michael Turitzin (MaNiAc)
+================
+*/
+void() monster_touch =
+{
+	//can cause problems for monsters on top of a player,  so only players
+	if (other.classname != "player")
+		return;
+	if (other.health <= 0)
+		return;
+
+	if ((!(other.flags & FL_ONGROUND)) && ((other.absmin_z >= self.absmax_z - 2)))
+		other.flags = other.flags + FL_ONGROUND;
+
+	//you can add other stuff like pushable players/monsters here
+};
+// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten  end
+
 /*
 ================
 monster_use
@@ -174,7 +206,14 @@ void() monster_death_use =
 	if (!self.target)
 		return;
 
-	activator = self.enemy;
+	if(self.infight_activator)
+	{
+		activator = self.infight_activator;
+	} 
+	else
+	{
+		activator = self.enemy;
+	}
 	SUB_UseTargets ();
 };
 
@@ -207,14 +246,17 @@ if(!(self.spawnflags & 8))
 {
 	droptofloor();
 
-	if (!walkmove(0,0))
-	{
-		dprint ("\n\n");
-		dprint (self.classname);
-		dprint (" in wall at: ");
-		dprint (vtos(self.origin));
-		dprint ("\n\n");
-	}
+	if !(self.spawnflags & I_AM_TURRET) // fixes an incorrect dprint -- dumptruck_ds
+		{
+		if (!walkmove(0,0))
+			{
+				dprint ("\n\n");
+				dprint (self.classname);
+				dprint (" in wall at: ");
+				dprint (vtos(self.origin));
+				dprint ("\n\n");
+			}
+		}
 }
 
 	self.takedamage = DAMAGE_AIM;
@@ -255,21 +297,23 @@ if(!(self.spawnflags & 8))
 	}
 
 // spread think times so they don't all happen at same time
-	self.nextthink = self.nextthink + random()*0.5;
-
-	if ((self.spawnflags & 8) && self.spawn_angry == 1) //dumptruck_ds -- using spawn_angry set to 1 in order to spawn in "angry" monsters
-	{
-		monster_use();
-	}
-	// local entity pl; //dumptruck_ds -- this is Shamblernaut's method
-	//
-	// pl = find (world, classname, "player");
-	//
-	// if (self.spawn_angry == 1)
+// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol  start
+//	self.nextthink = self.nextthink + random()*0.5;
+	self.nextthink = time + 0.1 + random()*0.5;
+// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol  end
+	// if ((self.spawnflags & 8) && self.spawn_angry == 1) //dumptruck_ds -- using spawn_angry set to 1 in order to spawn in "angry" monsters
 	// {
-	// activator = pl;
-	// monster_use();
+	// 	monster_use();
 	// }
+	local entity pl; //dumptruck_ds -- this is Shamblernaut's method
+
+	pl = find (world, classname, "player");
+
+	if (self.spawn_angry == 1)
+	{
+	activator = pl;
+	monster_use();
+	}
 };
 
 
@@ -277,12 +321,22 @@ void() walkmonster_start =
 
 	//Preach's tutorial
 {
+
+	if (cvar("nomonsters")) {
+		remove(self);
+		return;
+	}
+
 	if(monster_teleport(walkmonster_start_go))
     	return;
 
 // delay drop to floor to make sure all doors have been spawned
 // spread think times so they don't all happen at same time
-	self.nextthink = self.nextthink + .1 + (random()*0.4);
+	self.touch = monster_touch;	// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten
+// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol  start
+//	self.nextthink = self.nextthink + random()*0.5;
+	self.nextthink = time + 0.1 + random()*0.5;
+// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol  end
 	self.think = walkmonster_start_go;
 	total_monsters = total_monsters + 1;
 	///	Trigger enemy after spawn (khreathor)
@@ -337,35 +391,45 @@ void() flymonster_start_go =
 		self.th_stand ();
 	}
 
-	if ((self.spawnflags & 8) && self.spawn_angry == 1) //dumptruck_ds -- using spawn_angry set to 1 in order to spawn in "angry" monsters
+	self.nextthink = time + 0.1 + random()*0.5;	// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol
+
+// if ((self.spawnflags & 8) && self.spawn_angry == 1) //dumptruck_ds -- using spawn_angry set to 1 in order to spawn in "angry" monsters
+// {
+// monster_use();
+// }
+//dumptruck_ds -- this is Shamblernaut's method
+	local entity pl;
+
+	pl = find (world, classname, "player");
+
+	if (self.spawn_angry == 1)
 	{
+	activator = pl;
 	monster_use();
 	}
-	// local entity pl; //dumptruck_ds -- this is Shamblernaut's method
-	//
-	// local entity pl;
-	//
-	// pl = find (world, classname, "player");
-	//
-	// if (self.spawn_angry == 1)
-	// {
-	// activator = pl;
-	// monster_use();
-	// }
-
 
 };
 
 void() flymonster_start =
 {
+	if (cvar("nomonsters")) {
+		remove(self);
+		return;
+	}
 
 	//Preach's tutorial
 
 	if(monster_teleport(flymonster_start_go))
     	return;
 
+	self.touch = monster_touch;	// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten
+	self.flags = self.flags | FL_FLY;	// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol
+
 // spread think times so they don't all happen at same time
-	self.nextthink = self.nextthink + .1 + (random()*0.4);
+// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol  start
+//	self.nextthink = self.nextthink + random()*0.5;
+	self.nextthink = time + 0.1 + random()*0.5;
+// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol  end
 	self.think = flymonster_start_go;
 	total_monsters = total_monsters + 1;
 };
@@ -410,25 +474,34 @@ void() swimmonster_start_go =
 	}
 
 // spread think times so they don't all happen at same time
-	self.nextthink = self.nextthink + random()*0.5;
+// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol  start
+//	self.nextthink = self.nextthink + random()*0.5;
+	self.nextthink = time + 0.1 + random()*0.5;
+// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol  end
+// if ((self.spawnflags & 8) && self.spawn_angry == 1) //dumptruck_ds -- using spawn_angry set to 1 in order to spawn in "angry" monsters
+// {
+// monster_use();
+// }
+//dumptruck_ds -- this is Shamblernaut's method
+	local entity pl;
 
-	if ((self.spawnflags & 8) && self.spawn_angry == 1) //dumptruck_ds -- using spawn_angry set to 1 in order to spawn in "angry" monsters
+	pl = find (world, classname, "player");
+
+	if (self.spawn_angry == 1)
 	{
+	activator = pl;
 	monster_use();
-  }
-	// local entity pl; //dumptruck_ds -- this is Shamblernaut's method
-	//
-	// pl = find (world, classname, "player");
-	//
-	// if (self.spawn_angry == 1)
-	// {
-	// activator = pl;
-	// monster_use();
-	// }
+	}
 };
 
 void() swimmonster_start =
 {
+	if (cvar("nomonsters")) {
+		remove(self);
+		return;
+	}
+	self.touch = monster_touch;	// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten
+	self.flags = self.flags | FL_SWIM;	// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol
 
 	//Preach's tutorial
 
@@ -436,7 +509,10 @@ void() swimmonster_start =
     	return;
 
 // spread think times so they don't all happen at same time
-	self.nextthink = self.nextthink + .1 + (random()*0.4);
+// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol  start
+//	self.nextthink = self.nextthink + random()*0.5;
+	self.nextthink = time + 0.1 + random()*0.5;
+// 1998-08-14 Monsters sometimes do not move fix by Lord Sméagol  end
 	self.think = swimmonster_start_go;
 	total_monsters = total_monsters + 1;
 };

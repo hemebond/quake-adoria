@@ -422,32 +422,30 @@ void() plat2_crush =
 // Common Plat Code
 // ==================================
 
-/*QUAKED func_new_plat (0 .5 .8) ? DN_N_WAIT PLT_TOGGLE ELEVATOR START_AT_TOP PLAT2 P2_BOTTOM
+/*QUAKED func_new_plat (0 .5 .8) ? DN_N_WAIT PLT_TOGGLE ELEVATOR START_AT_TOP PLAT2 P2_BOTTOM X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 
 --------------
 DN_N_WAIT is a plat that starts at the top and when triggered, goes down, waits, then comes back up.
 health - number of seconds to wait (default 5)
-
 --------------
 PLT_TOGGLE is a plat that will change between the top and bottom each time it is triggered.
-
 --------------
 ELEVATOR is an elevator plat. You can have as many levels as you want but they must be all the same distance away. Use elevator button entity as the trigger.
-  cnt is the number of floors
-  height is the distance between floors
-  wait is the number of seconds before the elevator can be activated again after starting or stopping (default 0)
+cnt is the number of floors
+height is the distance between floors
+wait is the number of seconds before the elevator can be activated again after starting or stopping (default 0)
 
 START_AT_TOP is an optional flag for elevators. It just tells the elevator that it's position is the top floor. (Default is the bottom floor) USE THIS ONLY WITH ELEVATORS!
-
---------------
+-------------
 PLAT2 is a fixed version of the original plat. If you want the plat to start at the bottom and move to the top on demand, use a negative height. That will tell Quake to lower the plat at spawn time. Always place this plat type in the top position when making the map. This will ensure correct lighting, hopefully. If a plat2 is the target of a trigger, it will be disabled until it has been triggered. Delay is the wait before the plat returns to original position.
 
 If you don't want to bother figuring out the height, don't put a
 value in the height
 
-delay		default 3
-speed		default 150
-cnt			default 2
+delay default 3
+speed default 150
+cnt default 2
 
 P2_BOTTOM is an optional switch to have an auto-sized plat2 start at the bottom.
 --------------
@@ -480,21 +478,29 @@ local float negativeHeight;
 		self.sounds = 2;
 // FIX THIS TO LOAD A GENERIC PLAT SOUND
 
-	if (self.sounds == 1)
-	{
-		precache_sound ("plats/plat1.wav");
-		precache_sound ("plats/plat2.wav");
-		self.noise = "plats/plat1.wav";
-		self.noise1 = "plats/plat2.wav";
+	if (self.sounds == 1) {
+		if (!self.noise || self.noise == "") self.noise = "plats/plat1.wav";
+		if (!self.noise1 || self.noise1 == "") self.noise1 = "plats/plat2.wav";
+	}
+	else if (self.sounds == 2) {
+		if (!self.noise || self.noise == "") self.noise = "plats/medplat1.wav";
+		if (!self.noise1 || self.noise1 == "") self.noise1 = "plats/medplat2.wav";
+	}
+	else if (self.sounds == 3) { // base door sound
+		if (!self.noise || self.noise == "") self.noise = "doors/hydro1.wav";
+		if (!self.noise1 || self.noise1 == "") self.noise1 = "doors/hydro2.wav";
+	}
+	else if (self.sounds == 4) { // func_train sounds
+		if (!self.noise || self.noise == "") self.noise = "plats/train1.wav";
+		if (!self.noise1 || self.noise1 == "") self.noise1 = "plats/train2.wav";
+	}
+	else {
+		if (!self.noise || self.noise == "") self.noise = "misc/null.wav";
+		if (!self.noise1 || self.noise1 == "") self.noise1 = "misc/null.wav";
 	}
 
-	if (self.sounds == 2)
-	{
-		precache_sound ("plats/medplat1.wav");
-		precache_sound ("plats/medplat2.wav");
-		self.noise = "plats/medplat1.wav";
-		self.noise1 = "plats/medplat2.wav";
-	}
+	precache_sound(self.noise);
+	precache_sound(self.noise1);
 
 
 	self.mangle = self.angles;

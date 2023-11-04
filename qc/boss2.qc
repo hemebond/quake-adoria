@@ -34,6 +34,7 @@ $frame shockb1 shockb2 shockb3 shockb4 shockb5 shockb6
 $frame shockc1 shockc2 shockc3 shockc4 shockc5 shockc6 shockc7 shockc8
 $frame shockc9 shockc10
 
+float NO_LAVASPLASH = 2; //supress lava splash effect when raising, lowering or gibbing - dumptruck_ds
 
 void(vector p) boss2_missile;
 
@@ -276,14 +277,16 @@ void() GibBoss2 =
 	head.touch = SUB_Null;
 	head.think = SUB_Remove;
 	head.nextthink = time + 120;
-
-	// killed_monsters = killed_monsters + 1; //already done in combat.qc since this is now FL_MONSTER
-	WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-	WriteByte (MSG_BROADCAST, TE_LAVASPLASH);
-	// WriteByte (MSG_ALL, SVC_KILLEDMONSTER); //already done in combat.qc since this is now FL_MONSTER -- dumptruck_ds
-	WriteCoord (MSG_BROADCAST, self.origin_x);
-	WriteCoord (MSG_BROADCAST, self.origin_y);
-	WriteCoord (MSG_BROADCAST, self.origin_z);
+	if !(self.spawnflags & NO_LAVASPLASH)
+	{
+		// killed_monsters = killed_monsters + 1; //already done in combat.qc since this is now FL_MONSTER
+		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
+		WriteByte (MSG_BROADCAST, TE_LAVASPLASH);
+		// WriteByte (MSG_ALL, SVC_KILLEDMONSTER); //already done in combat.qc since this is now FL_MONSTER -- dumptruck_ds
+		WriteCoord (MSG_BROADCAST, self.origin_x);
+		WriteCoord (MSG_BROADCAST, self.origin_y);
+		WriteCoord (MSG_BROADCAST, self.origin_z);
+	}
 	remove (self);
 };
 
@@ -314,11 +317,14 @@ void() boss2_death8 = [$death8, boss2_death9] {};
 void() boss2_death9 = [$death9, boss2_death10]
 {
 	sound_move (self, CHAN_BODY, "boss1/out1.wav", 1, ATTN_NORM);
-	WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-	WriteByte (MSG_BROADCAST, TE_LAVASPLASH);
-	WriteCoord (MSG_BROADCAST, self.origin_x);
-	WriteCoord (MSG_BROADCAST, self.origin_y);
-	WriteCoord (MSG_BROADCAST, self.origin_z);
+	if !(self.spawnflags & NO_LAVASPLASH)
+	{
+		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
+		WriteByte (MSG_BROADCAST, TE_LAVASPLASH);
+		WriteCoord (MSG_BROADCAST, self.origin_x);
+		WriteCoord (MSG_BROADCAST, self.origin_y);
+		WriteCoord (MSG_BROADCAST, self.origin_z);
+	}
 };
 
 void(entity attacker, float damage) boss2_pain_go =
@@ -367,7 +373,7 @@ void(vector p) boss2_missile =
 
 	vec = normalize (d - org);
 
-	launch_spike (org, vec);
+	launch_spike2 (org, vec, 300);
 	// setmodel (newmis, "progs/lavaball.mdl");
 	if (self.mdl_proj != "") // dumptruck_ds custom_mdls
 	{
@@ -389,7 +395,6 @@ void(vector p) boss2_missile =
 
 	newmis.avelocity = '200 100 300';
 	setsize (newmis, VEC_ORIGIN, VEC_ORIGIN);
-	newmis.velocity = vec*300;
 	newmis.touch = T_MissileTouch; // rocket explosion
 	sound_attack (self, CHAN_WEAPON, "boss1/throw.wav", 1, ATTN_NORM);
 
@@ -432,11 +437,14 @@ void() boss2_awake =
 
 	self.enemy = activator;
 
-	WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
-	WriteByte (MSG_BROADCAST, TE_LAVASPLASH);
-	WriteCoord (MSG_BROADCAST, self.origin_x);
-	WriteCoord (MSG_BROADCAST, self.origin_y);
-	WriteCoord (MSG_BROADCAST, self.origin_z);
+	if !(self.spawnflags & NO_LAVASPLASH)
+	{
+		WriteByte (MSG_BROADCAST, SVC_TEMPENTITY);
+		WriteByte (MSG_BROADCAST, TE_LAVASPLASH);
+		WriteCoord (MSG_BROADCAST, self.origin_x);
+		WriteCoord (MSG_BROADCAST, self.origin_y);
+		WriteCoord (MSG_BROADCAST, self.origin_z);
+	}
 
 	self.yaw_speed = 20;
 	boss2_rise1 ();
@@ -449,6 +457,9 @@ void() monster_boss2 =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
 		return;
+
+	if (self.spawnflags & I_AM_TURRET)
+		objerror("Incompatible spawnflag: TURRET_MODE\n");
 
 	if (deathmatch)
 	{
@@ -475,5 +486,6 @@ void() monster_boss2 =
 
 	total_monsters = total_monsters + 1;
 	self.flags = FL_MONSTER;
+	self.touch = monster_touch;	// 1998-09-16 Sliding/not-jumping on monsters/boxes/players fix by Maddes/Kryten
 	self.use = boss2_awake;
 };

@@ -109,6 +109,32 @@ void() f_attack17       =[      $attack17,      f_attack18] {ai_charge(10);};
 void() f_attack18       =[      $attack18,      f_run1    ] {ai_charge(10);};
 
 void() f_death1 =[      $death1,        f_death2        ]
+	{
+		self.solid = SOLID_NOT;
+		sound_death (self, CHAN_VOICE, "fish/death.wav", 1, ATTN_NORM);
+	};
+void() f_death2 =[      $death2,        f_death3        ] {};
+void() f_death3 =[      $death3,        f_death4        ] {};
+void() f_death4 =[      $death4,        f_death5        ] {};
+void() f_death5 =[      $death5,        f_death6        ] {};
+void() f_death6 =[      $death6,        f_death7        ] {};
+void() f_death7 =[      $death7,        f_death8        ] {};
+void() f_death8 =[      $death8,        f_death9        ] {};
+void() f_death9 =[      $death9,        f_death10       ] {};
+void() f_death10 =[      $death10,       f_death11       ] {};
+void() f_death11 =[      $death11,       f_death12       ] {};
+void() f_death12 =[      $death12,       f_death13       ] {};
+void() f_death13 =[      $death13,       f_death14       ] {};
+void() f_death14 =[      $death14,       f_death15       ] {};
+void() f_death15 =[      $death15,       f_death16       ] {};
+void() f_death16 =[      $death16,       f_death17       ] {};
+void() f_death17 =[      $death17,       f_death18       ] {};
+void() f_death18 =[      $death18,       f_death19       ] {};
+void() f_death19 =[      $death19,       f_death20       ] {};
+void() f_death20 =[      $death20,       f_death21       ] {};
+void() f_death21 =[      $death21,       f_death21       ] {};
+
+void() fish_die =
 {
 	if (self.health < -35) //fish gibs -- dumptruck_ds
 	{
@@ -148,32 +174,16 @@ void() f_death1 =[      $death1,        f_death2        ]
 		{
 			ThrowHead ("progs/h_dog.mdl", self.health);
 		}
+		DropStuff();
 		SUB_Remove();
 	}
+	// regular death
 	else
-	self.solid = SOLID_NOT;
-	sound_death (self, CHAN_VOICE, "fish/death.wav", 1, ATTN_NORM);
+	  {
+			DropStuff();
+			f_death1();
+		}
 };
-void() f_death2 =[      $death2,        f_death3        ] {};
-void() f_death3 =[      $death3,        f_death4        ] {};
-void() f_death4 =[      $death4,        f_death5        ] {};
-void() f_death5 =[      $death5,        f_death6        ] {};
-void() f_death6 =[      $death6,        f_death7        ] {};
-void() f_death7 =[      $death7,        f_death8        ] {};
-void() f_death8 =[      $death8,        f_death9        ] {};
-void() f_death9 =[      $death9,        f_death10       ] {};
-void() f_death10 =[      $death10,       f_death11       ] {};
-void() f_death11 =[      $death11,       f_death12       ] {};
-void() f_death12 =[      $death12,       f_death13       ] {};
-void() f_death13 =[      $death13,       f_death14       ] {};
-void() f_death14 =[      $death14,       f_death15       ] {};
-void() f_death15 =[      $death15,       f_death16       ] {};
-void() f_death16 =[      $death16,       f_death17       ] {};
-void() f_death17 =[      $death17,       f_death18       ] {};
-void() f_death18 =[      $death18,       f_death19       ] {};
-void() f_death19 =[      $death19,       f_death20       ] {};
-void() f_death20 =[      $death20,       f_death21       ] {};
-void() f_death21 =[      $death21,       f_death21       ] {};
 
 void() f_pain1  =[      $pain1, f_pain2 ] {};
 void() f_pain2  =[      $pain2, f_pain3 ] {ai_pain(6);};
@@ -193,12 +203,66 @@ void(entity attacker, float damage)	fish_pain =
 
 
 
-/*QUAKED monster_fish (1 0 0) (-16 -16 -24) (16 16 24) Ambush
+/*QUAKED monster_fish (1 0 0) (-16 -16 -24) (16 16 24) AMBUSH X X TRIGGER_SPAWNED X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{
+	model ("progs/fish.mdl");
+}
+Rotfish.
+
+Default health = 25"
+
+snd_death(string) : "Path to custom death sound (BUBBLES)"
+snd_attack(string) : "Path to custom attack sound (CRUNCHY BITE)"
+snd_idle(string) : "Path to custom idle sound"
+
+mdl_body(string) : "Path to custom body model"
+mdl_gib1(string) : "Path to custom 1st gib model"
+mdl_gib2(string) : "Path to custom 2nd gib model"
+mdl_gib3(string) : "Path to custom 3rd gib model"
+
+effects(choices) : "Add a visual effect to an entity"
+0 : "None (Default)"
+1 : "Brightfield (yellow particles)"
+4 : "Bright light"
+8 : "Dim light"
+
+berserk(choices) "Skips certain pain animations similar to skill 3 (Makes a semi-nightmare monster!)"
+0 : "Off (Default)"
+1 : "Berserk (skip pain animations)"
+
+delay(float) : "Delay spawn in for this amount of time"
+
+wait(choices) : "Play an effect when trigger spawned?"
+0 : "Teleport Effects (Default)"
+1 : "Spawn Silently"
+
+spawn_angry(Choices)
+0 : "Only when trigger spawned, default behavior - not angry"
+1 : "Only when trigger spawned, set to 1 to spawn angry at player"
+
+infight_mode(Choices)
+0 : "Default behavior, only with different classnames"
+1 : "Infight with monsters with the same classname but a different mdl_body"
+2 : "Infight with monsters with the same classname and model but a different skin"
+3 : "Infight no matter what"
+
+health(integer) : "Set this to a custom health amount"
+pain_target(string) : "Fire this target when pain_threshold is reached"
+pain_threshold(integer) : "Fire pain_target when health drops below this amount"
+sight_trigger(integer) : "1 = Fire target upon seeing the player instead of death"
+skin(integer) : "Skin index (default 0) Use this when your custom model has more than one skin to select"
+obit_name(string) : "When used with obit_method, this will set part of the text for a custom obituary. e.g. a Super Soldier! Using the examples here, the obituary would read: Player was eviscerated by a Super Solider!"
+obit_method(string) : "When used with obit_name, will set part of the text for a custom obituary. e.g. eviscerated - If empty, defaults to killed."
+damage_mod(float) : "USE WITH CAUTION! Multiply all damage from this monster by this number (e.g. 4 = Quad damage)"
+
 */
 void() monster_fish =
 {
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
 		return;
+
+	if (self.spawnflags & I_AM_TURRET)
+		objerror("Incompatible spawnflag: TURRET_MODE\n");
 
 	if (deathmatch)
 	{
@@ -230,7 +294,8 @@ void() monster_fish =
 	self.th_stand = f_stand1;
 	self.th_walk = f_walk1;
 	self.th_run = f_run1;
-	self.th_die = f_death1;
+	// self.th_die = f_death1;
+	self.th_die = fish_die;
 	if !(self.berserk) //Berserk from http://celephais.net/board/view_thread.php?id=4&start=3465 -- dumptruck_ds
 	self.th_pain = fish_pain;
 	else

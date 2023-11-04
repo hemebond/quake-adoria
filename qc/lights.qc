@@ -4,8 +4,10 @@ lights.qc taken from c0burn's Slipgate mod -- dumptruck_ds
 
 float START_OFF		= 1;
 float FADE_IN_OUT	= 2;
+float SILENT_TORCH = 4; // for silent torch -- dumptruck_ds
 
-/*QUAKED info_null (0 0.5 0) (-4 -4 -4) (4 4 4)
+/*QUAKED info_null (0 0.5 0) (-4 -4 -4) (4 4 4) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Used as a positional target for spotlights, etc.
 */
 void() info_null =
@@ -16,7 +18,8 @@ void() info_null =
 	remove(self);
 };
 
-/*QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4)
+/*QUAKED info_notnull (0 0.5 0) (-4 -4 -4) (4 4 4) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Never used in the or
 */
 void() info_notnull =
@@ -220,7 +223,8 @@ void() light_use =
 	}
 };
 
-/*QUAKED light (0 1 0) (-8 -8 -8) (8 8 8) START_OFF FADE_IN_OUT
+/*QUAKED light (0 1 0) (-8 -8 -8) (8 8 8) START_OFF FADE_IN_OUT X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Light
 
 ==========
@@ -245,7 +249,7 @@ Select an attenuation formaula for the light:
 2 => 1/(x^2) attenuation
 3 => No attenuation (same brightness at any distance)
 4 => "local minlight" - No attenuation and like minlight,
-it won�t raise the lighting above it�s light value.
+it won't raise the lighting above it's light value.
 Unlike minlight, it will only affect surfaces within
 line of sight of the entity.
 5 => 1/(x^2) attenuation, but slightly more attenuated and
@@ -363,7 +367,8 @@ void() light =
 	}
 };
 
-/*QUAKED light_fluoro (0 1 0) (-8 -8 -8) (8 8 8) START_OFF FADE_IN_OUT
+/*QUAKED light_fluoro (0 1 0) (-8 -8 -8) (8 8 8) START_OFF FADE_IN_OUT X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Non-displayed light.
 Makes steady fluorescent humming sound.
 See the "light" entity for a full description.
@@ -377,7 +382,8 @@ void() light_fluoro =
 	light();
 };
 
-/*QUAKED light_fluorospark (0 1 0) (-8 -8 -8) (8 8 8)
+/*QUAKED light_fluorospark (0 1 0) (-8 -8 -8) (8 8 8) START_OFF FADE_IN_OUT X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+
 Non-displayed light.
 Makes sparking, broken fluorescent sound.
 Can't be toggled.
@@ -395,7 +401,7 @@ void() light_fluorospark =
 	remove(self);
 };
 
-/*QUAKED light_globe (0 1 0) (-8 -8 -8) (8 8 8)
+/*QUAKED light_globe (0 1 0) (-8 -8 -8) (8 8 8) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
 Sphere globe light.
 Can't be toggled.
 See the "light" entity for a full description.
@@ -410,7 +416,8 @@ void() light_globe =
 	makestatic(self);
 };
 
-/*QUAKED light_torch_small_walltorch (0 .5 0) (-10 -10 -20) (10 10 20)
+/*QUAKED light_torch_small_walltorch (0 .5 0) (-10 -10 -20) (10 10 20) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{	model ("progs/flame.mdl");	}
 Short wall torch
 See the "light" entity for a full description.
 */
@@ -419,14 +426,18 @@ void() light_torch_small_walltorch =
 	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
 		return;
 
-	precache_model("progs/flame.mdl");
-	setmodel(self, "progs/flame.mdl");
+	// precache_model("progs/flame.mdl");
+	precache_body_model("progs/flame.mdl");
+	// setmodel(self, "progs/flame.mdl");
+	body_model("progs/flame.mdl");
+	if !(self.spawnflags && SILENT_TORCH) // for silent torch -- dumptruck_ds
 	FireAmbient ();
 	makestatic(self);
 };
 
-/*QUAKED light_flame_large_yellow (0 1 0) (-10 -10 -12) (12 12 18)
-Large yellow flame ball
+/*QUAKED light_flame_large_yellow (0 1 0) (-10 -10 -12) (12 12 18) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{	model ( { "path" : "progs/flame2.mdl", "frame" : 1 } );	}
+Large yellow flame
 See the "light" entity for a full description.
 */
 void() light_flame_large_yellow =
@@ -441,8 +452,9 @@ void() light_flame_large_yellow =
 	makestatic(self);
 };
 
-/*QUAKED light_flame_small_yellow (0 1 0) (-8 -8 -8) (8 8 8)
-Small yellow flame ball
+/*QUAKED light_flame_small_yellow (0 1 0) (-8 -8 -8) (8 8 8) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{	model ("progs/flame2.mdl");	}
+Small yellow flame
 See the "light" entity for a full description.
 */
 void() light_flame_small_yellow =
@@ -456,7 +468,8 @@ void() light_flame_small_yellow =
 	makestatic(self);
 };
 
-/*QUAKED light_flame_small_white (0 1 0) (-8 -8 -8) (8 8 8)
+/*QUAKED light_flame_small_white (0 1 0) (-8 -8 -8) (8 8 8) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{	model ("progs/flame2.mdl");	}
 Left for compatability
 Identical to "light_flame_small_yellow"
 */
@@ -466,4 +479,25 @@ void() light_flame_small_white =
 		return;
 
 	light_flame_small_yellow();
+};
+
+/*QUAKED light_sprite_flame (0 1 0) (-8 -8 -8) (8 8 8) X X X X X X X X NOT_ON_EASY NOT_ON_NORMAL NOT_ON_HARD_OR_NIGHTMARE NOT_IN_DEATHMATCH NOT_IN_COOP NOT_IN_SINGLEPLAYER X NOT_ON_HARD_ONLY NOT_ON_NIGHTMARE_ONLY
+{	model ("progs/s_flame.spr");	}
+Large flame spite*/
+void() light_sprite_flame =
+{
+	if (SUB_Inhibit ())  // new spawnflags for all entities -- iw
+		return;
+
+		precache_model("progs/s_flame.spr");
+		setmodel(self, "progs/s_flame.spr");
+		FireAmbient ();
+
+		self.frame = rint(random() * 13);
+		self.first_frame = 0;
+		self.last_frame = 13;
+		self.speed = 0.05;
+		self.think = misc_model_think;
+		self.nextthink = time + 0.1;
+
 };
