@@ -8,5 +8,6 @@
 *.pts
 
 *.dat
+*.lno
 
 **/autosave/
